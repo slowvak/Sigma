@@ -123,60 +123,60 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SRVR-01 | Pending | Pending |
-| SRVR-02 | Pending | Pending |
-| SRVR-03 | Pending | Pending |
-| SRVR-04 | Pending | Pending |
-| SRVR-05 | Pending | Pending |
-| SRVR-06 | Pending | Pending |
-| SRVR-07 | Pending | Pending |
-| BROW-01 | Pending | Pending |
-| BROW-02 | Pending | Pending |
-| BROW-03 | Pending | Pending |
-| BROW-04 | Pending | Pending |
-| VIEW-01 | Pending | Pending |
-| VIEW-02 | Pending | Pending |
-| VIEW-03 | Pending | Pending |
-| VIEW-04 | Pending | Pending |
-| VIEW-05 | Pending | Pending |
-| VIEW-06 | Pending | Pending |
-| VIEW-07 | Pending | Pending |
-| WLVL-01 | Pending | Pending |
-| WLVL-02 | Pending | Pending |
-| WLVL-03 | Pending | Pending |
-| WLVL-04 | Pending | Pending |
-| SEGD-01 | Pending | Pending |
-| SEGD-02 | Pending | Pending |
-| SEGD-03 | Pending | Pending |
-| SEGD-04 | Pending | Pending |
-| SEGD-05 | Pending | Pending |
-| LABL-01 | Pending | Pending |
-| LABL-02 | Pending | Pending |
-| LABL-03 | Pending | Pending |
-| LABL-04 | Pending | Pending |
-| LABL-05 | Pending | Pending |
-| LABL-06 | Pending | Pending |
-| EDIT-01 | Pending | Pending |
-| EDIT-02 | Pending | Pending |
-| EDIT-03 | Pending | Pending |
-| EDIT-04 | Pending | Pending |
-| EDIT-05 | Pending | Pending |
-| EDIT-06 | Pending | Pending |
-| EDIT-07 | Pending | Pending |
-| EDIT-08 | Pending | Pending |
-| EDIT-09 | Pending | Pending |
-| EDIT-10 | Pending | Pending |
-| SAVE-01 | Pending | Pending |
-| SAVE-02 | Pending | Pending |
-| SAVE-03 | Pending | Pending |
-| SAVE-04 | Pending | Pending |
-| KEYS-01 | Pending | Pending |
+| SRVR-01 | Phase 1 | Pending |
+| SRVR-02 | Phase 1 | Pending |
+| SRVR-03 | Phase 1 | Pending |
+| SRVR-04 | Phase 1 | Pending |
+| SRVR-05 | Phase 1 | Pending |
+| SRVR-06 | Phase 1 | Pending |
+| SRVR-07 | Phase 5 | Pending |
+| BROW-01 | Phase 1 | Pending |
+| BROW-02 | Phase 1 | Pending |
+| BROW-03 | Phase 1 | Pending |
+| BROW-04 | Phase 1 | Pending |
+| VIEW-01 | Phase 2 | Pending |
+| VIEW-02 | Phase 2 | Pending |
+| VIEW-03 | Phase 2 | Pending |
+| VIEW-04 | Phase 2 | Pending |
+| VIEW-05 | Phase 2 | Pending |
+| VIEW-06 | Phase 2 | Pending |
+| VIEW-07 | Phase 2 | Pending |
+| WLVL-01 | Phase 2 | Pending |
+| WLVL-02 | Phase 2 | Pending |
+| WLVL-03 | Phase 2 | Pending |
+| WLVL-04 | Phase 2 | Pending |
+| SEGD-01 | Phase 3 | Pending |
+| SEGD-02 | Phase 3 | Pending |
+| SEGD-03 | Phase 3 | Pending |
+| SEGD-04 | Phase 3 | Pending |
+| SEGD-05 | Phase 3 | Pending |
+| LABL-01 | Phase 3 | Pending |
+| LABL-02 | Phase 3 | Pending |
+| LABL-03 | Phase 3 | Pending |
+| LABL-04 | Phase 3 | Pending |
+| LABL-05 | Phase 3 | Pending |
+| LABL-06 | Phase 3 | Pending |
+| EDIT-01 | Phase 4 | Pending |
+| EDIT-02 | Phase 4 | Pending |
+| EDIT-03 | Phase 4 | Pending |
+| EDIT-04 | Phase 4 | Pending |
+| EDIT-05 | Phase 5 | Pending |
+| EDIT-06 | Phase 5 | Pending |
+| EDIT-07 | Phase 5 | Pending |
+| EDIT-08 | Phase 5 | Pending |
+| EDIT-09 | Phase 4 | Pending |
+| EDIT-10 | Phase 4 | Pending |
+| SAVE-01 | Phase 4 | Pending |
+| SAVE-02 | Phase 4 | Pending |
+| SAVE-03 | Phase 4 | Pending |
+| SAVE-04 | Phase 5 | Pending |
+| KEYS-01 | Phase 4 | Pending |
 
 **Coverage:**
-- v1 requirements: 45 total
-- Mapped to phases: 0
-- Unmapped: 45
+- v1 requirements: 48 total
+- Mapped to phases: 48
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-03-24 after initial definition*
+*Last updated: 2026-03-24 after roadmap creation*
