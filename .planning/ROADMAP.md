@@ -29,7 +29,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. User can click a DICOM volume and see Study Description and Series Description; click a NIfTI volume and see file date
   3. User can open a volume and the full 3D data is transferred to the browser as binary (verified by console or dev tools showing ArrayBuffer receipt)
   4. DICOM files from the same series appear as a single volume entry, not individual files
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 01-01-PLAN.md — Server scaffold, catalog layer (scanner, DICOM grouper, models), and test infrastructure
+- [ ] 01-02-PLAN.md — FastAPI REST endpoints for volume listing, metadata, and binary data serving
+- [ ] 01-03-PLAN.md — Vite client with volume browser UI, detail panel, and binary volume loading
 **UI hint**: yes
 
 ### Phase 2: Core Viewer
@@ -90,7 +94,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Server & Data Pipeline | 0/TBD | Not started | - |
+| 1. Server & Data Pipeline | 0/3 | Planning complete | - |
 | 2. Core Viewer | 0/TBD | Not started | - |
 | 3. Segmentation Display & Labels | 0/TBD | Not started | - |
 | 4. Editing Tools & Save | 0/TBD | Not started | - |
