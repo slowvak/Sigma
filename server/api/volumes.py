@@ -91,6 +91,7 @@ def load_and_cache_volume(
         dimensions=metadata["dimensions"],
         voxel_spacing=metadata["voxel_spacing"],
         dtype=metadata["dtype"],
+        modality=metadata.get("modality", "unknown"),
         window_center=metadata["window_center"],
         window_width=metadata["window_width"],
     )

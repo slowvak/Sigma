@@ -15,5 +15,6 @@ class VolumeMetadata(BaseModel):
     dimensions: list[int] | None = None
     voxel_spacing: list[float] | None = None
     dtype: str | None = None
+    modality: str | None = None
     window_center: float | None = None
     window_width: float | None = None
