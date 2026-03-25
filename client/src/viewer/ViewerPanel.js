@@ -1,9 +1,9 @@
 /**
  * ViewerPanel — renders a single plane (axial, coronal, or sagittal)
- * with canvas, orientation labels, slice slider, and label bar.
+ * with canvas, orientation labels, slice slider, crosshairs, and label bar.
  */
 import { extractAxialSlice, extractCoronalSlice, extractSagittalSlice } from './sliceExtractor.js';
-import { applyWindowLevel } from './windowLevel.js';
+import { applyWindowLevel, computeWLDrag } from './windowLevel.js';
 
 const ORIENTATION_LABELS = {
   axial: { left: 'R', right: 'L', top: 'A', bottom: 'P' },
@@ -23,6 +23,48 @@ const TOGGLE_LETTERS = {
   sagittal: 'S',
 };
 
+const CROSSHAIR_COLORS = {
+  axial: '#ffff00',
+  coronal: '#00ff00',
+  sagittal: '#ff6600',
+};
+
+/**
+ * Convert canvas pixel coordinates to voxel cursor updates for a given axis.
+ * Exported for testability.
+ *
+ * @param {number} canvasX - X position in CSS pixels relative to canvas
+ * @param {number} canvasY - Y position in CSS pixels relative to canvas
+ * @param {string} axis - 'axial' | 'coronal' | 'sagittal'
+ * @param {{ width: number, clientWidth: number }} canvasH - Horizontal canvas info
+ * @param {{ height: number, clientHeight: number }} canvasV - Vertical canvas info
+ * @param {number[]} dims - Volume dimensions [dimX, dimY, dimZ]
+ * @returns {{ cursorUpdates: Object }} Map of cursor index -> voxel value
+ */
+export function canvasToVoxel(canvasX, canvasY, axis, canvasH, canvasV, dims) {
+  // Account for CSS scaling
+  const voxelX = Math.floor(canvasX * (canvasH.width / canvasH.clientWidth));
+  const voxelY = Math.floor(canvasY * (canvasV.height / canvasV.clientHeight));
+
+  const cursorUpdates = {};
+
+  if (axis === 'axial') {
+    // Axial: canvasX -> cursor[0] (x), canvasY -> cursor[1] (y)
+    cursorUpdates[0] = Math.max(0, Math.min(voxelX, dims[0] - 1));
+    cursorUpdates[1] = Math.max(0, Math.min(voxelY, dims[1] - 1));
+  } else if (axis === 'coronal') {
+    // Coronal: canvasX -> cursor[0] (x), canvasY -> cursor[2] (z)
+    cursorUpdates[0] = Math.max(0, Math.min(voxelX, dims[0] - 1));
+    cursorUpdates[2] = Math.max(0, Math.min(voxelY, dims[2] - 1));
+  } else {
+    // Sagittal: canvasX -> cursor[1] (y), canvasY -> cursor[2] (z)
+    cursorUpdates[1] = Math.max(0, Math.min(voxelX, dims[1] - 1));
+    cursorUpdates[2] = Math.max(0, Math.min(voxelY, dims[2] - 1));
+  }
+
+  return { cursorUpdates };
+}
+
 export class ViewerPanel {
   /**
    * @param {Object} options
@@ -40,8 +82,15 @@ export class ViewerPanel {
     this.imageData = null;
     this.ctx = null;
 
+    // Interaction tracking
+    this._isDraggingCrosshair = false;
+    this._isDraggingWL = false;
+    this._lastWLX = 0;
+    this._lastWLY = 0;
+
     this._buildDOM();
     this._setupResizeObserver();
+    this._setupEventHandlers();
   }
 
   _buildDOM() {
@@ -69,7 +118,6 @@ export class ViewerPanel {
     toggleBtn.className = 'panel-toggle-btn';
     toggleBtn.textContent = TOGGLE_LETTERS[this.axis];
     toggleBtn.setAttribute('aria-label', `Toggle ${this.axis} single view`);
-    // Toggle button wired in Plan 03 (single-view mode)
     labelBar.appendChild(toggleBtn);
     this.toggleBtn = toggleBtn;
 
@@ -133,6 +181,92 @@ export class ViewerPanel {
       }
     });
     this.resizeObserver.observe(this.canvasContainer);
+  }
+
+  _setupEventHandlers() {
+    // Mouse down on canvas: crosshair drag or Ctrl+drag W/L
+    this.canvas.addEventListener('mousedown', (e) => {
+      if (!this.volume) return;
+
+      if (e.ctrlKey || e.metaKey) {
+        // Ctrl+drag W/L
+        e.preventDefault();
+        this._isDraggingWL = true;
+        this._lastWLX = e.clientX;
+        this._lastWLY = e.clientY;
+        this.canvas.style.cursor = 'grab';
+      } else {
+        // Crosshair click+drag
+        this._isDraggingCrosshair = true;
+        this._updateCrosshairFromMouse(e);
+      }
+    });
+
+    // Mouse move: update crosshair or W/L during drag
+    this._onMouseMove = (e) => {
+      if (this._isDraggingCrosshair) {
+        this._updateCrosshairFromMouse(e);
+      } else if (this._isDraggingWL) {
+        const dx = e.clientX - this._lastWLX;
+        const dy = e.clientY - this._lastWLY;
+        const { center, width } = computeWLDrag(dx, dy, this.state.windowCenter, this.state.windowWidth);
+        this.state.setWindowLevel(center, width);
+        this._lastWLX = e.clientX;
+        this._lastWLY = e.clientY;
+      }
+    };
+
+    // Mouse up: stop all drags
+    this._onMouseUp = () => {
+      this._isDraggingCrosshair = false;
+      if (this._isDraggingWL) {
+        this._isDraggingWL = false;
+        this.canvas.style.cursor = '';
+      }
+    };
+
+    document.addEventListener('mousemove', this._onMouseMove);
+    document.addEventListener('mouseup', this._onMouseUp);
+
+    // Mouse wheel: scroll slices (D-01, D-02, D-03)
+    this.canvas.addEventListener('wheel', (e) => {
+      if (!this.volume) return;
+      e.preventDefault();
+
+      const [cx, cy, cz] = this.state.cursor;
+      // deltaY > 0 = scroll down = previous slice, deltaY < 0 = scroll up = next slice
+      const delta = e.deltaY > 0 ? -1 : 1;
+
+      if (this.axis === 'axial') {
+        this.state.setCursor(cx, cy, cz + delta);
+      } else if (this.axis === 'coronal') {
+        this.state.setCursor(cx, cy + delta, cz);
+      } else {
+        this.state.setCursor(cx + delta, cy, cz);
+      }
+    }, { passive: false });
+  }
+
+  /**
+   * Convert mouse event position to voxel coords and update state cursor.
+   */
+  _updateCrosshairFromMouse(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    const cssX = e.clientX - rect.left;
+    const cssY = e.clientY - rect.top;
+
+    const { cursorUpdates } = canvasToVoxel(
+      cssX, cssY, this.axis,
+      { width: this.canvas.width, clientWidth: this.canvas.clientWidth },
+      { height: this.canvas.height, clientHeight: this.canvas.clientHeight },
+      this.dims
+    );
+
+    const [cx, cy, cz] = this.state.cursor;
+    const newX = cursorUpdates[0] !== undefined ? cursorUpdates[0] : cx;
+    const newY = cursorUpdates[1] !== undefined ? cursorUpdates[1] : cy;
+    const newZ = cursorUpdates[2] !== undefined ? cursorUpdates[2] : cz;
+    this.state.setCursor(newX, newY, newZ);
   }
 
   /**
@@ -249,7 +383,7 @@ export class ViewerPanel {
   }
 
   /**
-   * Render the current slice to the canvas.
+   * Render the current slice to the canvas, then draw crosshair lines.
    */
   render() {
     if (!this.volume || !this.dims || !this.imageData) return;
@@ -278,6 +412,9 @@ export class ViewerPanel {
     // Draw to canvas
     this.ctx.putImageData(this.imageData, 0, 0);
 
+    // Draw crosshair lines AFTER putImageData
+    this._drawCrosshairs();
+
     // Update readout and slider
     const maxSlice = this._getMaxSlice();
     this.sliceReadout.textContent = `${sliceIndex}/${maxSlice}`;
@@ -286,11 +423,57 @@ export class ViewerPanel {
   }
 
   /**
+   * Draw crosshair lines on the canvas at the current cursor position.
+   */
+  _drawCrosshairs() {
+    const ctx = this.ctx;
+    const [w, h] = this._getSliceDims();
+    const color = CROSSHAIR_COLORS[this.axis];
+
+    let crossX, crossY;
+    if (this.axis === 'axial') {
+      crossX = this.state.cursor[0]; // vertical line at cursor X
+      crossY = this.state.cursor[1]; // horizontal line at cursor Y
+    } else if (this.axis === 'coronal') {
+      crossX = this.state.cursor[0]; // vertical line at cursor X
+      crossY = this.state.cursor[2]; // horizontal line at cursor Z
+    } else {
+      crossX = this.state.cursor[1]; // vertical line at cursor Y
+      crossY = this.state.cursor[2]; // horizontal line at cursor Z
+    }
+
+    ctx.save();
+    ctx.globalAlpha = 0.8;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+
+    // Vertical line at crossX
+    ctx.beginPath();
+    ctx.moveTo(crossX + 0.5, 0);
+    ctx.lineTo(crossX + 0.5, h);
+    ctx.stroke();
+
+    // Horizontal line at crossY
+    ctx.beginPath();
+    ctx.moveTo(0, crossY + 0.5);
+    ctx.lineTo(w, crossY + 0.5);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  /**
    * Clean up resources.
    */
   destroy() {
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
+    }
+    if (this._onMouseMove) {
+      document.removeEventListener('mousemove', this._onMouseMove);
+    }
+    if (this._onMouseUp) {
+      document.removeEventListener('mouseup', this._onMouseUp);
     }
   }
 }

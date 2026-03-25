@@ -14,6 +14,22 @@
  * @param {number} windowCenter - Center (level) value
  * @param {number} windowWidth - Width value (must be >= 1)
  */
+/**
+ * Compute new window/level values from a drag delta.
+ *
+ * @param {number} dx - Horizontal pixel delta (right = wider)
+ * @param {number} dy - Vertical pixel delta (down = darker = higher center)
+ * @param {number} currentCenter - Current window center
+ * @param {number} currentWidth - Current window width
+ * @returns {{ center: number, width: number }}
+ */
+export function computeWLDrag(dx, dy, currentCenter, currentWidth) {
+  const sensitivity = currentWidth / 300;
+  const width = Math.max(1, currentWidth + dx * sensitivity);
+  const center = currentCenter + dy * sensitivity;
+  return { center, width };
+}
+
 export function applyWindowLevel(sliceData, rgba, windowCenter, windowWidth) {
   const len = sliceData.length;
   const minVal = windowCenter - windowWidth / 2;
