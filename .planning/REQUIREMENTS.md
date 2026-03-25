@@ -46,17 +46,17 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **SEGD-01**: After opening main image, prompt dialog for associated segmentation file
 - [x] **SEGD-02**: Auto-detect segmentation file matching `<basename>_segmentation.nii.gz` pattern
 - [x] **SEGD-03**: If matching segmentation exists, pre-select it in the dialog so user just clicks OK
-- [ ] **SEGD-04**: Segmentation overlay rendered on top of main image with color per label
-- [ ] **SEGD-05**: User-selectable overlay transparency via 0–100 slider below object dropdown
+- [x] **SEGD-04**: Segmentation overlay rendered on top of main image with color per label
+- [x] **SEGD-05**: User-selectable overlay transparency via 0–100 slider below object dropdown
 
 ### Label Management
 
 - [ ] **LABL-01**: Each label has an integer value, text name, and color — all user-editable via double-click
-- [ ] **LABL-02**: Labels start as Label1, Label2, etc.
-- [ ] **LABL-03**: Changing a label's integer value updates all mask voxels with the old value to the new value
+- [x] **LABL-02**: Labels start as Label1, Label2, etc.
+- [x] **LABL-03**: Changing a label's integer value updates all mask voxels with the old value to the new value
 - [ ] **LABL-04**: Label dropdown in tool panel shows labels present in loaded segmentation
-- [ ] **LABL-05**: "Add object" button creates new label with lowest unused integer value (user-overridable)
-- [ ] **LABL-06**: Background (0) is always present in label list
+- [x] **LABL-05**: "Add object" button creates new label with lowest unused integer value (user-overridable)
+- [x] **LABL-06**: Background (0) is always present in label list
 
 ### Editing Tools
 
@@ -148,14 +148,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEGD-01 | Phase 3 | Pending |
 | SEGD-02 | Phase 3 | Complete |
 | SEGD-03 | Phase 3 | Complete |
-| SEGD-04 | Phase 3 | Pending |
-| SEGD-05 | Phase 3 | Pending |
+| SEGD-04 | Phase 3 | Complete |
+| SEGD-05 | Phase 3 | Complete |
 | LABL-01 | Phase 3 | Pending |
-| LABL-02 | Phase 3 | Pending |
-| LABL-03 | Phase 3 | Pending |
+| LABL-02 | Phase 3 | Complete |
+| LABL-03 | Phase 3 | Complete |
 | LABL-04 | Phase 3 | Pending |
-| LABL-05 | Phase 3 | Pending |
-| LABL-06 | Phase 3 | Pending |
+| LABL-05 | Phase 3 | Complete |
+| LABL-06 | Phase 3 | Complete |
 | EDIT-01 | Phase 4 | Pending |
 | EDIT-02 | Phase 4 | Pending |
 | EDIT-03 | Phase 4 | Pending |
