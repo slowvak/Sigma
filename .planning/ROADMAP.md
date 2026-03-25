@@ -48,8 +48,8 @@ Plans:
   5. User can toggle between 4-panel and single-view mode via A/C/S buttons and return with + button
 **Plans:** 3 plans
 Plans:
-- [ ] 02-01-PLAN.md — Server-side RAS+ normalization, auto-windowing metadata, and voxel spacing
-- [ ] 02-02-PLAN.md — Client viewer core: ViewerState, slice extraction, rendering pipeline, 4-panel layout with sliders
+- [x] 02-01-PLAN.md — Server-side RAS+ normalization, auto-windowing metadata, and voxel spacing
+- [x] 02-02-PLAN.md — Client viewer core: ViewerState, slice extraction, rendering pipeline, 4-panel layout with sliders
 - [ ] 02-03-PLAN.md — Viewer interactions: crosshairs, W/L drag, presets, single-view toggle, visual verification
 **UI hint**: yes
 
