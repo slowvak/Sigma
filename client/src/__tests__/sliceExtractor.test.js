@@ -17,22 +17,22 @@ function makeTestVolume() {
 }
 
 describe('extractAxialSlice', () => {
-  it('returns a contiguous subarray of length dimX*dimY at offset z*dimX*dimY', () => {
+  it('returns Float32Array of length dimX*dimY with Y flipped (anterior at top)', () => {
     const { volume, dimX, dimY } = makeTestVolume();
     const z = 2;
     const slice = extractAxialSlice(volume, z, dimX, dimY);
     expect(slice.length).toBe(dimX * dimY); // 3*4 = 12
-    // First element should be at offset z*dimX*dimY = 2*12 = 24
-    expect(slice[0]).toBe(24);
-    // Last element: 24 + 11 = 35
-    expect(slice[11]).toBe(35);
+    // Row 0 (top) = y=3 (anterior): volume[0 + 3*3 + 2*12] = volume[33] = 33
+    expect(slice[0]).toBe(33);
+    // Row dimY-1 (bottom) = y=0 (posterior): volume[0 + 0*3 + 2*12] = volume[24] = 24
+    expect(slice[(dimY - 1) * dimX]).toBe(24);
   });
 
-  it('uses subarray (zero-copy) for axial slices', () => {
+  it('allocates new array (not zero-copy) due to Y flip', () => {
     const { volume, dimX, dimY } = makeTestVolume();
     const slice = extractAxialSlice(volume, 0, dimX, dimY);
-    // Subarray shares buffer with original
-    expect(slice.buffer).toBe(volume.buffer);
+    // Allocated array does not share buffer
+    expect(slice.buffer).not.toBe(volume.buffer);
   });
 });
 

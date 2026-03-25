@@ -50,8 +50,9 @@ export function canvasToVoxel(canvasX, canvasY, axis, canvasH, canvasV, dims) {
 
   if (axis === 'axial') {
     // Axial: canvasX -> cursor[0] (x), canvasY -> cursor[1] (y)
+    // Y is flipped in rendering (anterior at top), so invert Y
     cursorUpdates[0] = Math.max(0, Math.min(voxelX, dims[0] - 1));
-    cursorUpdates[1] = Math.max(0, Math.min(voxelY, dims[1] - 1));
+    cursorUpdates[1] = Math.max(0, Math.min(dims[1] - 1 - voxelY, dims[1] - 1));
   } else if (axis === 'coronal') {
     // Coronal: canvasX -> cursor[0] (x), canvasY -> cursor[2] (z)
     // Z is flipped in rendering (superior at top), so invert Y
@@ -435,7 +436,8 @@ export class ViewerPanel {
     let crossX, crossY;
     if (this.axis === 'axial') {
       crossX = this.state.cursor[0]; // vertical line at cursor X
-      crossY = this.state.cursor[1]; // horizontal line at cursor Y
+      // Y is flipped in rendering (anterior at top)
+      crossY = this.dims[1] - 1 - this.state.cursor[1];
     } else if (this.axis === 'coronal') {
       crossX = this.state.cursor[0]; // vertical line at cursor X
       // Z is flipped in rendering (superior at top)

@@ -17,7 +17,16 @@
  */
 export function extractAxialSlice(volume, z, dimX, dimY) {
   const offset = z * dimX * dimY;
-  return volume.subarray(offset, offset + dimX * dimY);
+  const slice = new Float32Array(dimX * dimY);
+  // Flip Y so anterior (high y) is at the top of the canvas
+  for (let y = 0; y < dimY; y++) {
+    const srcRow = offset + y * dimX;
+    const dstRow = (dimY - 1 - y) * dimX;
+    for (let x = 0; x < dimX; x++) {
+      slice[dstRow + x] = volume[srcRow + x];
+    }
+  }
+  return slice;
 }
 
 /**
