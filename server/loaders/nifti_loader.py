@@ -58,3 +58,21 @@ def load_nifti_volume(filepath: str | Path) -> tuple[np.ndarray, dict]:
     }
 
     return data, metadata
+
+
+def load_nifti_segmentation(filepath: str | Path) -> tuple[np.ndarray, dict]:
+    """Load a NIfTI segmentation, canonicalize, and extract uint8 data.
+    
+    Returns:
+        tuple of (data, metadata) where:
+        - data: C-contiguous uint8 numpy array in RAS+ orientation
+        - metadata: dict with dimensions
+    """
+    img = nib.load(str(filepath))
+    canonical = nib.as_closest_canonical(img)
+    raw = canonical.get_fdata()
+    data = np.ascontiguousarray(raw.astype(np.uint8).transpose(2, 1, 0))
+    metadata = {
+        "dimensions": [int(d) for d in canonical.shape[:3]],
+    }
+    return data, metadata

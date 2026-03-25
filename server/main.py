@@ -9,6 +9,7 @@ directory to scan recursively for volumes.
 
 import sys
 from pathlib import Path
+import re
 
 # Ensure project root is on sys.path so 'server' package resolves
 _project_root = str(Path(__file__).resolve().parent.parent)
@@ -20,7 +21,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from server.api.volumes import router as volumes_router, load_and_cache_volume
-from server.catalog.models import VolumeMetadata
+from server.catalog.models import VolumeMetadata, SegmentationMetadata
 
 app = FastAPI(title="NextEd Image Server")
 
@@ -41,6 +42,36 @@ app.include_router(volumes_router)
 
 # Catalog of discovered volumes (populated at startup)
 _catalog: list[VolumeMetadata] = []
+# Catalog of segmentations grouped by volume ID (volume_id -> list[SegmentationMetadata])
+_segmentation_catalog: dict[str, list[SegmentationMetadata]] = {}
+
+_SEG_PATTERN = re.compile(r'_seg(mentation)?\.(nii\.gz|nii)$')
+
+
+def _find_companion_segmentations(volume_path: Path) -> list[Path]:
+    """Find companion segmentation files for a given volume path."""
+    stem = volume_path.name
+    if stem.endswith('.nii.gz'):
+        base = stem[:-7]
+    elif stem.endswith('.nii'):
+        base = stem[:-4]
+    else:
+        return []
+    
+    parent = volume_path.parent
+    patterns = [
+        f"{base}_segmentation.nii.gz",
+        f"{base}_segmentation.nii",
+        f"{base}_seg.nii.gz",
+        f"{base}_seg.nii",
+    ]
+    
+    found = []
+    for pattern in patterns:
+        candidate = parent / pattern
+        if candidate.exists():
+            found.append(candidate)
+    return found
 
 
 @app.get("/api/volumes", response_model=list[VolumeMetadata])
@@ -68,9 +99,11 @@ def _discover_volumes(paths: list[str]) -> list[tuple[str, str]]:
         elif path.is_dir():
             # Scan for NIfTI files
             for nii in sorted(path.rglob("*.nii")):
-                found.append((str(nii), "nifti"))
+                if not _SEG_PATTERN.search(nii.name):
+                    found.append((str(nii), "nifti"))
             for nii in sorted(path.rglob("*.nii.gz")):
-                found.append((str(nii), "nifti"))
+                if not _SEG_PATTERN.search(nii.name):
+                    found.append((str(nii), "nifti"))
             # Check for DICOM directories (dirs containing .dcm files)
             dcm_dirs = set()
             for dcm in path.rglob("*.dcm"):
@@ -101,8 +134,24 @@ def main():
         try:
             meta = load_and_cache_volume(vol_id, filepath, fmt)
             _catalog.append(meta)
+            _segmentation_catalog[vol_id] = []
             dims = meta.dimensions or []
             print(f"  [{vol_id}] {meta.name} ({fmt}) {dims}")
+            
+            # Discover segmentations
+            if fmt == "nifti":
+                comps = _find_companion_segmentations(Path(filepath))
+                for j, comp in enumerate(comps):
+                    seg_id = f"seg_{vol_id}_{j}"
+                    seg_meta = SegmentationMetadata(
+                        id=seg_id,
+                        name=comp.name,
+                        path=str(comp),
+                        volume_id=vol_id,
+                        dimensions=None  # Can be populated upon load
+                    )
+                    _segmentation_catalog[vol_id].append(seg_meta)
+                    print(f"    ↳ seg: [{seg_id}] {comp.name}")
         except Exception as e:
             print(f"  [{vol_id}] FAILED to load {filepath}: {e}")
 

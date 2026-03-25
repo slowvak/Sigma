@@ -18,3 +18,13 @@ class VolumeMetadata(BaseModel):
     modality: str | None = None
     window_center: float | None = None
     window_width: float | None = None
+
+
+class SegmentationMetadata(BaseModel):
+    """Metadata for a discovered companion segmentation."""
+
+    id: str
+    name: str
+    path: str
+    volume_id: str
+    dimensions: list[int] | None = None
