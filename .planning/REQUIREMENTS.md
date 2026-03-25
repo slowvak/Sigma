@@ -44,8 +44,8 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Segmentation Display
 
 - [ ] **SEGD-01**: After opening main image, prompt dialog for associated segmentation file
-- [ ] **SEGD-02**: Auto-detect segmentation file matching `<basename>_segmentation.nii.gz` pattern
-- [ ] **SEGD-03**: If matching segmentation exists, pre-select it in the dialog so user just clicks OK
+- [x] **SEGD-02**: Auto-detect segmentation file matching `<basename>_segmentation.nii.gz` pattern
+- [x] **SEGD-03**: If matching segmentation exists, pre-select it in the dialog so user just clicks OK
 - [ ] **SEGD-04**: Segmentation overlay rendered on top of main image with color per label
 - [ ] **SEGD-05**: User-selectable overlay transparency via 0–100 slider below object dropdown
 
@@ -146,8 +146,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WLVL-03 | Phase 2 | Complete |
 | WLVL-04 | Phase 2 | Complete |
 | SEGD-01 | Phase 3 | Pending |
-| SEGD-02 | Phase 3 | Pending |
-| SEGD-03 | Phase 3 | Pending |
+| SEGD-02 | Phase 3 | Complete |
+| SEGD-03 | Phase 3 | Complete |
 | SEGD-04 | Phase 3 | Pending |
 | SEGD-05 | Phase 3 | Pending |
 | LABL-01 | Phase 3 | Pending |
