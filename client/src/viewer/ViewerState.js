@@ -61,6 +61,20 @@ export class ViewerState {
   }
 
   /**
+   * Set window/level from a named preset. Unlike setWindowLevel,
+   * this preserves the activePreset name.
+   * @param {string} name - Preset name (e.g., "Brain", "Bone")
+   * @param {number} center - Window center
+   * @param {number} width - Window width
+   */
+  setPreset(name, center, width) {
+    this.windowCenter = center;
+    this.windowWidth = Math.max(1, width);
+    this.activePreset = name;
+    this.notify();
+  }
+
+  /**
    * Subscribe to state changes.
    * @param {function(ViewerState): void} fn - Callback
    * @returns {function(): void} Unsubscribe function

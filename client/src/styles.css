@@ -421,3 +421,63 @@ body {
   display: block;
   margin-bottom: 2px;
 }
+
+/* -- W/L Preset Bar -- */
+
+.preset-bar {
+  border-bottom: 1px solid #3a3a3a;
+}
+
+.preset-heading {
+  font-size: 12px;
+  font-weight: 600;
+  color: #a0a0a0;
+  padding: 16px 16px 8px 16px;
+}
+
+.preset-btn {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 0 16px 8px 16px;
+  padding: 8px 16px;
+  background: #2d2d2d;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #e0e0e0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.preset-btn:hover {
+  background: #363636;
+}
+
+.preset-btn.active {
+  background: #4a9eff;
+  color: #ffffff;
+  border-color: #4a9eff;
+}
+
+/* -- Single-View Mode -- */
+
+.viewer-grid.single-view .viewer-panel-container {
+  display: none;
+}
+
+.viewer-grid.single-view .viewer-panel-container.active {
+  display: flex;
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+}
+
+.viewer-grid.single-view .blank-panel {
+  display: none;
+}
+
+.panel-toggle-btn.return-btn {
+  background: #4a9eff;
+  color: #ffffff;
+  border-radius: 4px;
+}

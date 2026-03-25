@@ -5,6 +5,7 @@ import { renderVolumeDetail, renderEmptyState } from './ui/volumeDetail.js';
 import { fetchVolumes, fetchVolumeMetadata, fetchVolumeData } from './api.js';
 import { ViewerState } from './viewer/ViewerState.js';
 import { FourPanelLayout } from './viewer/FourPanelLayout.js';
+import { createPresetBar } from './ui/presetBar.js';
 
 let currentVolume = null;
 let currentLayout = null;
@@ -124,6 +125,10 @@ function _setupViewerSidebar(sidebar, metadata, state, detailPanel) {
     (spacing ? `${spacing[0].toFixed(2)} &times; ${spacing[1].toFixed(2)} &times; ${spacing[2].toFixed(2)} mm` : '') +
     (metadata.modality ? `<br>${metadata.modality}` : '');
   sidebar.appendChild(metaEl);
+
+  // W/L presets (visible only for CT per WLVL-04)
+  const presetBar = createPresetBar(state);
+  sidebar.appendChild(presetBar);
 
   // W/L readout
   const wlReadout = document.createElement('div');
