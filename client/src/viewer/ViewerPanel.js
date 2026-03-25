@@ -187,6 +187,9 @@ export class ViewerPanel {
   }
 
   _setupEventHandlers() {
+    // Prevent context menu on canvas (Ctrl+click on macOS triggers it)
+    this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
     // Mouse down on canvas: crosshair drag or Ctrl+drag W/L
     this.canvas.addEventListener('mousedown', (e) => {
       if (!this.volume) return;
