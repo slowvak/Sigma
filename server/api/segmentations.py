@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
+
+import numpy as np
+import nibabel as nib
+from pathlib import Path
 
 from server.catalog.models import SegmentationMetadata
 from server.loaders.nifti_loader import load_nifti_segmentation
@@ -23,6 +27,41 @@ async def list_segmentations(volume_id: str) -> list[SegmentationMetadata]:
         raise HTTPException(status_code=404, detail=f"Volume {volume_id} not found")
         
     return _segmentation_catalog[volume_id]
+
+
+@router.post("/volumes/{volume_id}/segmentations")
+async def save_segmentation(volume_id: str, request: Request, filename: str) -> dict:
+    """Save binary segmentation data to a NIfTI file."""
+    from server.main import _catalog
+    
+    if volume_id not in _catalog:
+        raise HTTPException(status_code=404, detail=f"Volume {volume_id} not found")
+        
+    vol_meta = _catalog[volume_id]
+    body = await request.body()
+    
+    try:
+        # Load source volume to get canonical affine and header
+        ref_img = nib.load(vol_meta.path)
+        canonical_ref = nib.as_closest_canonical(ref_img)
+        dimX, dimY, dimZ = canonical_ref.shape[:3]
+        
+        # Reshape the client binary input (Z, Y, X) and transpose back to (X, Y, Z)
+        data_z_y_x = np.frombuffer(body, dtype=np.uint8).reshape((dimZ, dimY, dimX))
+        transposed_array = data_z_y_x.transpose(2, 1, 0)
+        
+        # Create new NIfTI image
+        new_img = nib.Nifti1Image(transposed_array, canonical_ref.affine, canonical_ref.header.copy())
+        new_img.set_data_dtype(np.uint8)
+        
+        # Save to disk
+        out_path = Path(vol_meta.path).parent / filename
+        nib.save(new_img, out_path)
+        
+        return {"status": "success", "filename": filename, "path": str(out_path)}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save segmentation: {e}")
 
 
 @router.get("/segmentations/{seg_id}/data")

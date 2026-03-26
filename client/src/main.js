@@ -79,7 +79,7 @@ async function openVolume(volume, { detailPanel, sidebar, toolPanel }) {
     _setupViewerSidebar(sidebar, metadata, state, detailPanel);
     
     // Set up editing tool panel
-    _setupToolPanel(toolPanel, state);
+    _setupToolPanel(toolPanel, state, metadata);
     toolPanel.style.display = 'flex';
 
   } catch (err) {
@@ -159,9 +159,73 @@ function _setupViewerSidebar(sidebar, metadata, state, detailPanel) {
   sidebar.appendChild(wlReadout);
 }
 
-function _setupToolPanel(toolPanel, state) {
+function _setupToolPanel(toolPanel, state, metadata) {
   toolPanel.innerHTML = '<div class="tool-heading">Editing Tools</div>';
   
+  // Save Action
+  const saveSec = document.createElement('div');
+  saveSec.className = 'tool-section';
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = '💾 Save Segmentation As...';
+  saveBtn.style.cssText = 'padding:8px;border:none;border-radius:4px;cursor:pointer;background:#4a9eff;color:#fff;font-weight:bold;';
+  
+  const showSaveModal = () => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;';
+    
+    const modal = document.createElement('div');
+    modal.style.cssText = 'background:#1e1e1e;padding:24px;border-radius:8px;width:400px;border:1px solid #3a3a3a;box-shadow:0 10px 30px rgba(0,0,0,0.5);color:#e0e0e0;';
+    
+    modal.innerHTML = `
+      <h2 style="margin-top:0;font-size:18px;margin-bottom:8px;">Save Segmentation As...</h2>
+      <p style="font-size:14px;color:#a0a0a0;margin-bottom:16px;">Provide a filename for the modified segmentation volume.</p>
+      <input type="text" id="save-filename" style="width:100%;padding:8px;margin-bottom:24px;background:#2d2d2d;border:1px solid #4a9eff;border-radius:4px;color:#fff;" />
+      <div style="display:flex;justify-content:flex-end;gap:8px;">
+        <button id="save-cancel" style="padding:8px 16px;background:none;border:1px solid #a0a0a0;color:#a0a0a0;border-radius:4px;cursor:pointer;">Cancel</button>
+        <button id="save-confirm" style="padding:8px 16px;background:#4a9eff;border:none;color:#fff;border-radius:4px;cursor:pointer;font-weight:bold;">Confirm Save</button>
+      </div>
+    `;
+    
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    const input = modal.querySelector('#save-filename');
+    input.value = metadata.name ? metadata.name.replace(/\.nii(\.gz)?$/, '') + '_seg.nii.gz' : 'segmentation.nii.gz';
+    input.focus();
+    
+    const close = () => document.body.removeChild(overlay);
+    
+    modal.querySelector('#save-cancel').addEventListener('click', close);
+    modal.querySelector('#save-confirm').addEventListener('click', () => {
+      const filename = input.value.trim();
+      if (!filename) return;
+      
+      const confirmBtn = modal.querySelector('#save-confirm');
+      confirmBtn.textContent = 'Saving...';
+      confirmBtn.disabled = true;
+      
+      fetch('/api/volumes/' + metadata.id + '/segmentations?filename=' + encodeURIComponent(filename), {
+        method: 'POST',
+        body: state.segVolume,
+        headers: { 'Content-Type': 'application/octet-stream' }
+      }).then(res => {
+        if (!res.ok) throw new Error('Save failed');
+        return res.json();
+      }).then(data => {
+        close();
+        alert('Saved successfully: ' + data.filename);
+      }).catch(err => {
+        alert(err.message);
+        confirmBtn.textContent = 'Confirm Save';
+        confirmBtn.disabled = false;
+      });
+    });
+  };
+
+  saveBtn.addEventListener('click', showSaveModal);
+  saveSec.appendChild(saveBtn);
+  toolPanel.appendChild(saveSec);
+
   // Tool selection
   const toolSec = document.createElement('div');
   toolSec.className = 'tool-section';
