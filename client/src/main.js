@@ -152,6 +152,41 @@ function _setupViewerSidebar(sidebar, metadata, state, detailPanel) {
 function _setupToolPanel(toolPanel, state) {
   toolPanel.innerHTML = '<div class="tool-heading">Editing Tools</div>';
   
+  // Tool selection
+  const toolSec = document.createElement('div');
+  toolSec.className = 'tool-section';
+  toolSec.style.flexDirection = 'row';
+  toolSec.style.gap = '4px';
+  toolSec.innerHTML = `
+    <button class="tool-btn" data-tool="crosshair" style="flex:1;padding:6px;border:1px solid #ccc;border-radius:4px;cursor:pointer;">⌖</button>
+    <button class="tool-btn" data-tool="paint" title="Paint" style="flex:1;padding:6px;border:1px solid #ccc;border-radius:4px;cursor:pointer;">🖌</button>
+    <button class="tool-btn" data-tool="erase" title="Erase" style="flex:1;padding:6px;border:1px solid #ccc;border-radius:4px;cursor:pointer;">▱</button>
+  `;
+  toolPanel.appendChild(toolSec);
+
+  const toolBtns = toolSec.querySelectorAll('.tool-btn');
+  toolBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      state.setActiveTool(e.currentTarget.getAttribute('data-tool'));
+    });
+  });
+
+  const updateActiveTool = () => {
+    toolBtns.forEach(btn => {
+      if (btn.getAttribute('data-tool') === state.activeTool) {
+        btn.style.background = '#4a9eff';
+        btn.style.color = '#fff';
+        btn.style.borderColor = '#4a9eff';
+      } else {
+        btn.style.background = '#fff';
+        btn.style.color = '#1e1e1e';
+        btn.style.borderColor = '#ccc';
+      }
+    });
+  };
+  state.subscribe(updateActiveTool);
+  updateActiveTool();
+
   // Settings section
   const settingsSec = document.createElement('div');
   settingsSec.className = 'tool-section';
@@ -214,7 +249,15 @@ function _setupToolPanel(toolPanel, state) {
       const row = document.createElement('div');
       row.style.display = 'flex';
       row.style.alignItems = 'center';
-      row.style.marginBottom = '8px';
+      row.style.marginBottom = '2px';
+      row.style.padding = '4px';
+      row.style.borderRadius = '4px';
+      row.style.cursor = 'pointer';
+      
+      const isSelected = state.activeLabel === val;
+      if (isSelected) {
+        row.style.background = '#e0e0e0';
+      }
       
       const isVis = label.isVisible !== false;
       const eyeIcon = isVis ? '👁' : '✖';
@@ -222,9 +265,16 @@ function _setupToolPanel(toolPanel, state) {
       
       row.innerHTML = `
         <button class="vis-toggle" data-val="${val}" style="background:none;border:none;cursor:pointer;margin-right:8px;opacity:${opacity};" aria-label="Toggle visibility">${eyeIcon}</button>
-        <div style="width:12px;height:12px;background:rgb(${label.color.r},${label.color.g},${label.color.b});margin-right:8px;border-radius:2px;opacity:${opacity};"></div>
+        <div style="width:12px;height:12px;background:rgb(${label.color.r},${label.color.g},${label.color.b});margin-right:8px;border-radius:2px;opacity:${opacity}; border: 1px solid #333"></div>
         <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:${opacity};">${label.name}</span>
       `;
+      
+      row.addEventListener('click', (e) => {
+        if (!e.target.closest('.vis-toggle')) {
+          state.setActiveLabel(val);
+        }
+      });
+      
       labelsSec.appendChild(row);
     }
     

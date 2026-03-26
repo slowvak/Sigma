@@ -90,6 +90,7 @@ export class ViewerPanel {
     // Interaction tracking
     this._isDraggingCrosshair = false;
     this._isDraggingWL = false;
+    this._isPainting = false;
     this._lastWLX = 0;
     this._lastWLY = 0;
 
@@ -203,6 +204,10 @@ export class ViewerPanel {
         this._lastWLX = e.clientX;
         this._lastWLY = e.clientY;
         this.canvas.style.cursor = 'grab';
+      } else if (this.state.activeTool === 'paint' || this.state.activeTool === 'erase') {
+        e.preventDefault();
+        this._isPainting = true;
+        this._applyBrush(e);
       } else {
         // Crosshair click+drag
         this._isDraggingCrosshair = true;
@@ -221,12 +226,16 @@ export class ViewerPanel {
         this.state.setWindowLevel(center, width);
         this._lastWLX = e.clientX;
         this._lastWLY = e.clientY;
+      } else if (this._isPainting) {
+        e.preventDefault();
+        this._applyBrush(e);
       }
     };
 
     // Mouse up: stop all drags
     this._onMouseUp = () => {
       this._isDraggingCrosshair = false;
+      this._isPainting = false;
       if (this._isDraggingWL) {
         this._isDraggingWL = false;
         this.canvas.style.cursor = '';
@@ -275,6 +284,86 @@ export class ViewerPanel {
     const newY = cursorUpdates[1] !== undefined ? cursorUpdates[1] : cy;
     const newZ = cursorUpdates[2] !== undefined ? cursorUpdates[2] : cz;
     this.state.setCursor(newX, newY, newZ);
+  }
+
+  /**
+   * Apply brush stroke to segmentation volume based on active tools and dimensions.
+   */
+  _applyBrush(e) {
+    if (!this.state.segVolume) return;
+    
+    const rect = this.canvas.getBoundingClientRect();
+    const cssX = e.clientX - rect.left;
+    const cssY = e.clientY - rect.top;
+
+    const { cursorUpdates } = canvasToVoxel(
+      cssX, cssY, this.axis,
+      { width: this.canvas.width, clientWidth: this.canvas.clientWidth },
+      { height: this.canvas.height, clientHeight: this.canvas.clientHeight },
+      this.dims
+    );
+
+    const [cx, cy, cz] = this.state.cursor;
+    const targetX = cursorUpdates[0] !== undefined ? cursorUpdates[0] : cx;
+    const targetY = cursorUpdates[1] !== undefined ? cursorUpdates[1] : cy;
+    const targetZ = cursorUpdates[2] !== undefined ? cursorUpdates[2] : cz;
+
+    let targetDepth, uCenter, vCenter;
+    
+    if (this.axis === 'axial') {
+      targetDepth = targetZ; uCenter = targetX; vCenter = targetY;
+    } else if (this.axis === 'coronal') {
+      targetDepth = targetY; uCenter = targetX; vCenter = targetZ;
+    } else {
+      targetDepth = targetX; uCenter = targetY; vCenter = targetZ;
+    }
+
+    const { brushRadius, multiSlice, paintConstraintMin, paintConstraintMax, activeTool, activeLabel } = this.state;
+    const [dimX, dimY, dimZ] = this.dims;
+    const R2 = brushRadius * brushRadius;
+    const sliceRange = multiSlice;
+    let modified = false;
+
+    const depthMax = this.axis === 'axial' ? dimZ : (this.axis === 'coronal' ? dimY : dimX);
+    const uMax = this.axis === 'sagittal' ? dimY : dimX;
+    const vMax = this.axis === 'axial' ? dimY : dimZ;
+
+    const minDepth = Math.max(0, targetDepth - sliceRange);
+    const maxDepth = Math.min(depthMax - 1, targetDepth + sliceRange);
+    
+    const minU = Math.max(0, uCenter - brushRadius);
+    const maxU = Math.min(uMax - 1, uCenter + brushRadius);
+    const minV = Math.max(0, vCenter - brushRadius);
+    const maxV = Math.min(vMax - 1, vCenter + brushRadius);
+
+    for (let d = minDepth; d <= maxDepth; d++) {
+      for (let v = minV; v <= maxV; v++) {
+        for (let u = minU; u <= maxU; u++) {
+          const dist2 = (u - uCenter) * (u - uCenter) + (v - vCenter) * (v - vCenter);
+          if (dist2 <= R2) {
+            let x, y, z;
+            if (this.axis === 'axial') { z = d; x = u; y = v; }
+            else if (this.axis === 'coronal') { y = d; x = u; z = v; }
+            else { x = d; y = u; z = v; }
+
+            const idx = z * (dimX * dimY) + y * dimX + x;
+            const val = this.volume[idx];
+            
+            if (val >= paintConstraintMin && val <= paintConstraintMax) {
+              const newVal = activeTool === 'paint' ? activeLabel : 0;
+              if (this.state.segVolume[idx] !== newVal) {
+                this.state.segVolume[idx] = newVal;
+                modified = true;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (modified) {
+      this.state.notify();
+    }
   }
 
   /**
