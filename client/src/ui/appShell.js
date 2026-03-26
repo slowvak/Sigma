@@ -20,10 +20,15 @@ export function createAppShell() {
   listContainer.setAttribute('aria-label', 'Available volumes');
   sidebar.appendChild(listContainer);
 
+  const toolPanel = document.createElement('div');
+  toolPanel.className = 'tool-panel';
+  toolPanel.style.display = 'none';
+
   const detailPanel = document.createElement('main');
   detailPanel.className = 'detail-panel';
 
   body.appendChild(sidebar);
+  body.appendChild(toolPanel);
   body.appendChild(detailPanel);
 
   const app = document.getElementById('app');
@@ -31,5 +36,5 @@ export function createAppShell() {
   app.appendChild(header);
   app.appendChild(body);
 
-  return { listContainer, detailPanel, sidebar };
+  return { listContainer, detailPanel, sidebar, toolPanel };
 }

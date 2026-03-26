@@ -1,10 +1,11 @@
 export function buildColorLUT(labels) {
   const lut = new Uint8Array(256 * 3);
   for (const [value, label] of labels) {
+    const isVisible = label.isVisible !== false;
     const offset = value * 3;
-    lut[offset] = label.color.r;
-    lut[offset + 1] = label.color.g;
-    lut[offset + 2] = label.color.b;
+    lut[offset] = isVisible ? label.color.r : 0;
+    lut[offset + 1] = isVisible ? label.color.g : 0;
+    lut[offset + 2] = isVisible ? label.color.b : 0;
   }
   return lut;
 }

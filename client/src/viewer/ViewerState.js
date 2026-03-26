@@ -32,6 +32,13 @@ export class ViewerState {
     this.activePreset = null;
     this.singleView = null; // 'axial' | 'coronal' | 'sagittal' | null
 
+    // Tools state
+    this.activeTool = 'crosshair';
+    this.brushRadius = 2;
+    this.multiSlice = 0;
+    this.paintConstraintMin = -1024;
+    this.paintConstraintMax = 3000;
+
     // Segmentation state
     this.segVolume = null;          // Uint8Array — full segmentation volume
     this.segDims = null;            // [dimX, dimY, dimZ] — must match volume dims
@@ -99,6 +106,35 @@ export class ViewerState {
 
   setOverlayOpacity(opacity) {
     this.overlayOpacity = Math.max(0, Math.min(1, opacity));
+    this.notify();
+  }
+
+  setActiveTool(tool) {
+    this.activeTool = tool;
+    this.notify();
+  }
+
+  setBrushRadius(radius) {
+    this.brushRadius = Math.max(1, radius);
+    this.notify();
+  }
+
+  setMultiSlice(depth) {
+    this.multiSlice = Math.max(0, depth);
+    this.notify();
+  }
+
+  setPaintConstraints(min, max) {
+    this.paintConstraintMin = min;
+    this.paintConstraintMax = max;
+    this.notify();
+  }
+
+  toggleLabelVisibility(value) {
+    const label = this.labels.get(value);
+    if (!label) return;
+    label.isVisible = label.isVisible === undefined ? false : !label.isVisible;
+    this.colorLUT = buildColorLUT(this.labels);
     this.notify();
   }
 
