@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 03-segmentation-display-labels
 source: [03-01-SUMMARY.md, 03-02-SUMMARY.md]
 started: 2026-03-25T23:55:00Z
