@@ -46,6 +46,7 @@ export class ViewerState {
     this.activeLabel = 0;           // Currently selected label value
     this.overlayOpacity = 0.5;      // 0.0-1.0 (default 50% per D-09)
     this.colorLUT = null;           // Uint8Array(768) — built from labels
+    this.undoStack = [];            // Array of diffs { indices: [], oldValues: [] }
 
     /** @type {Array<function(ViewerState): void>} */
     this.listeners = [];
@@ -143,10 +144,28 @@ export class ViewerState {
     this.notify();
   }
 
+  pushUndo(diff) {
+    if (!diff || !diff.indices || diff.indices.length === 0) return;
+    this.undoStack.push(diff);
+    if (this.undoStack.length > 3) {
+      this.undoStack.shift(); // Cap at length 3
+    }
+    this.notify();
+  }
+
+  undo() {
+    if (this.undoStack.length === 0 || !this.segVolume) return;
+    const diff = this.undoStack.pop();
+    for (let i = 0; i < diff.indices.length; i++) {
+      this.segVolume[diff.indices[i]] = diff.oldValues[i];
+    }
+    this.notify();
+  }
+
   addLabel(name, color) {
     const value = findLowestUnusedValue(this.labels);
     if (value === null) return null;
-    this.labels.set(value, { name, value, color });
+    this.labels.set(value, { name, value, color, isVisible: true });
     this.colorLUT = buildColorLUT(this.labels);
     this.notify();
     return value;
@@ -163,6 +182,7 @@ export class ViewerState {
       name: newProps.name !== undefined ? newProps.name : label.name,
       value: newValue,
       color: newProps.color !== undefined ? newProps.color : label.color,
+      isVisible: newProps.isVisible !== undefined ? newProps.isVisible : (label.isVisible !== undefined ? label.isVisible : true),
     };
     if (newValue !== oldValue) {
       reassignLabelValue(this.segVolume, oldValue, newValue);

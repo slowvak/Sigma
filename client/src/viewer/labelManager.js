@@ -7,7 +7,7 @@ export function discoverLabels(segVolume, apiLabels = []) {
   }
   const labels = new Map();
   // Background always first (LABL-06)
-  labels.set(0, { name: 'Background', value: 0, color: { r: 0, g: 0, b: 0 } });
+  labels.set(0, { name: 'Background', value: 0, color: { r: 0, g: 0, b: 0 }, isVisible: true });
   
   const metaMap = new Map();
   for (const al of apiLabels) {
@@ -22,12 +22,14 @@ export function discoverLabels(segVolume, apiLabels = []) {
         name: meta.name || `Label ${val}`,
         value: val,
         color: meta.color ? hexToRgb(meta.color) : getColorForLabel(val),
+        isVisible: true
       });
     } else {
       labels.set(val, {
         name: `Label ${val}`,
         value: val,
         color: getColorForLabel(val),
+        isVisible: true
       });
     }
   }
