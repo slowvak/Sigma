@@ -16,10 +16,17 @@ export function blendSegmentationOverlay(segSlice, rgba, colorLUT, alpha) {
   for (let i = 0; i < len; i++) {
     const label = segSlice[i];
     if (label === 0) continue;
+
     const ci = label * 3;
+    const r = colorLUT[ci];
+    const g = colorLUT[ci + 1];
+    const b = colorLUT[ci + 2];
+
+    if (r === 0 && g === 0 && b === 0) continue;
+
     const j = i << 2;
-    rgba[j]     = oneMinusAlpha * rgba[j]     + alpha * colorLUT[ci];
-    rgba[j + 1] = oneMinusAlpha * rgba[j + 1] + alpha * colorLUT[ci + 1];
-    rgba[j + 2] = oneMinusAlpha * rgba[j + 2] + alpha * colorLUT[ci + 2];
+    rgba[j]     = oneMinusAlpha * rgba[j]     + alpha * r;
+    rgba[j + 1] = oneMinusAlpha * rgba[j + 1] + alpha * g;
+    rgba[j + 2] = oneMinusAlpha * rgba[j + 2] + alpha * b;
   }
 }
