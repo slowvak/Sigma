@@ -42,7 +42,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. All existing API endpoints respond under /api/v1/ prefix and old unversioned paths return 404 or redirect
   2. Volume list for DICOM volumes includes study_instance_uid and series_instance_uid fields in the JSON response
   3. Server internally retains the file paths of all DICOM files in a loaded series (verifiable by inspecting catalog state or debug endpoint)
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 05-01-PLAN.md — Server-side API versioning, VolumeMetadata UID fields, DICOM discovery changes, and tests
+- [ ] 05-02-PLAN.md — Client-side URL migration to /api/v1/ and full-stack verification
 
 ### Phase 6: Folder Monitoring & WebSocket Events
 **Goal**: Users see volumes appear and disappear in real time as files are added to or removed from watched folders, without restarting the server or refreshing the page
@@ -86,7 +89,7 @@ Phases execute in numeric order: 5 -> 6 -> 7 -> 8
 | 2. Core Viewer | v1.0 | 3/3 | Complete | - |
 | 3. Segmentation Display & Labels | v1.0 | -/- | Complete | - |
 | 4. Editing Tools & Save | v1.0 | -/- | Complete | - |
-| 5. Foundation | v2.0 | 0/TBD | Not started | - |
+| 5. Foundation | v2.0 | 0/2 | Not started | - |
 | 6. Folder Monitoring & WebSocket Events | v2.0 | 0/TBD | Not started | - |
 | 7. Format-Aware Segmentation Storage | v2.0 | 0/TBD | Not started | - |
 | 8. DICOMweb WADO-RS | v2.0 | 0/TBD | Not started | - |
