@@ -235,9 +235,16 @@ export class ViewerPanel {
         this.canvas.style.cursor = 'grab';
       } else if (this.state.activeTool === 'paint' || this.state.activeTool === 'erase') {
         e.preventDefault();
+        if (this._currentDiff && !this._isPainting) {
+          delete this._currentDiff.seen;
+          this.state.pushUndo(this._currentDiff);
+        }
         this._isPainting = true;
         this._currentDiff = { indices: [], oldValues: [], seen: new Set() };
         this._applyBrush(e);
+      } else if (this.state.activeTool === 'region-grow') {
+        e.preventDefault();
+        this._startRegionGrow(e);
       } else {
         // Crosshair click+drag
         this._isDraggingCrosshair = true;
@@ -281,6 +288,15 @@ export class ViewerPanel {
 
     document.addEventListener('mousemove', this._onMouseMove);
     document.addEventListener('mouseup', this._onMouseUp);
+
+    this.state.subscribe(() => {
+        // Commit region grow diff if we switch tools
+        if (this.state.activeTool !== 'region-grow' && this._currentDiff && !this._isPainting) {
+            delete this._currentDiff.seen;
+            this.state.pushUndo(this._currentDiff);
+            this._currentDiff = null;
+        }
+    });
 
     // Mouse move on canvas (hover): update pixel value readout
     this.canvas.addEventListener('mousemove', (e) => {
@@ -363,10 +379,20 @@ export class ViewerPanel {
    * Apply brush stroke to segmentation volume based on active tools and dimensions.
    */
   _applyBrush(e) {
-    if (!this.state.segVolume) {
-      console.warn('[NextEd] Paint ignored: no segmentation volume. Create a label first.');
-      return;
+    if ((!this.state.segVolume && this.state.activeTool === 'paint') || this.state.activeLabel === 0) {
+      if (this.state.activeTool === 'erase') {
+          if (!this.state.segVolume) return; // Erasing nothing is fine
+      } else {
+          if (typeof this.state.onLabelRequired === 'function') {
+            const success = this.state.onLabelRequired();
+            if (!success) return;
+          } else {
+            console.warn('[NextEd] Paint ignored: no label selected.');
+            return;
+          }
+      }
     }
+    if (!this.state.segVolume) return; // Guard for erase
     
     const rect = this.canvas.getBoundingClientRect();
     const cssX = e.clientX - rect.left;
@@ -446,6 +472,168 @@ export class ViewerPanel {
     if (modified) {
       this.state.notify();
     }
+  }
+
+  /**
+   * Initialize a Region Grow session from a canvas click event.
+   */
+  _startRegionGrow(e) {
+    if (!this.state.segVolume || this.state.activeLabel === 0) {
+      if (typeof this.state.onLabelRequired === 'function') {
+        const success = this.state.onLabelRequired();
+        if (!success) return;
+      } else {
+        console.warn('[NextEd] Region grow ignored: no active label.');
+        return;
+      }
+    }
+    if (!this.volume) return;
+
+    const rect = this.canvas.getBoundingClientRect();
+    const cssX = e.clientX - rect.left;
+    const cssY = e.clientY - rect.top;
+
+    const { cursorUpdates } = canvasToVoxel(
+      cssX, cssY, this.axis,
+      { width: this.canvas.width, clientWidth: this.canvas.clientWidth },
+      { height: this.canvas.height, clientHeight: this.canvas.clientHeight },
+      this.dims
+    );
+
+    const [cx, cy, cz] = this.state.cursor;
+    const targetX = cursorUpdates[0] !== undefined ? cursorUpdates[0] : cx;
+    const targetY = cursorUpdates[1] !== undefined ? cursorUpdates[1] : cy;
+    const targetZ = cursorUpdates[2] !== undefined ? cursorUpdates[2] : cz;
+
+    // Calculate 5x5 mean in the current viewing plane
+    let sum = 0;
+    let count = 0;
+    const [dimX, dimY, dimZ] = this.dims;
+
+    let uCenter, vCenter, fixedDepth;
+    if (this.axis === 'axial') {
+      uCenter = targetX; vCenter = targetY; fixedDepth = targetZ;
+    } else if (this.axis === 'coronal') {
+      uCenter = targetX; vCenter = targetZ; fixedDepth = targetY;
+    } else {
+      uCenter = targetY; vCenter = targetZ; fixedDepth = targetX;
+    }
+
+    for (let u = uCenter - 2; u <= uCenter + 2; u++) {
+      for (let v = vCenter - 2; v <= vCenter + 2; v++) {
+        let x, y, z;
+        if (this.axis === 'axial') { x = u; y = v; z = fixedDepth; }
+        else if (this.axis === 'coronal') { x = u; y = fixedDepth; z = v; }
+        else { x = fixedDepth; y = u; z = v; }
+
+        if (x >= 0 && x < dimX && y >= 0 && y < dimY && z >= 0 && z < dimZ) {
+          const idx = z * dimX * dimY + y * dimX + x;
+          sum += this.volume[idx];
+          count++;
+        }
+      }
+    }
+
+    const mean = count > 0 ? sum / count : 0;
+
+    // Save previous diff (if any applied and committed)
+    if (this._currentDiff) {
+      delete this._currentDiff.seen;
+      this.state.pushUndo(this._currentDiff);
+      this._currentDiff = null;
+    }
+
+    // Set state
+    this.state.regionGrowSeed = [targetX, targetY, targetZ];
+    this.state.regionGrowMean = mean;
+    this.state.regionGrowAxis = this.axis;
+    this.state.executeRegionGrow = () => this._applyRegionGrow();
+
+    // Check if label already has saved bounds
+    const label = this.state.labels.get(this.state.activeLabel);
+    if (!label || label.regionGrowMin === undefined || label.regionGrowMax === undefined) {
+      // Default range (mean ± 50, adjustable by user later)
+      this.state.setRegionGrowRange(mean - 50, mean + 50);
+    }
+    
+    // The apply function reads the latest regionGrowMin/Max from state
+    this._applyRegionGrow();
+  }
+
+  /**
+   * Apply Region Grow with current state parameters
+   */
+  _applyRegionGrow() {
+    if (!this.state.regionGrowSeed || !this.volume || !this.state.segVolume) return;
+    
+    // 1. Revert previous _currentDiff if it exists, so we start fresh from the seed
+    if (this._currentDiff) {
+      for (let i = 0; i < this._currentDiff.indices.length; i++) {
+        this.state.segVolume[this._currentDiff.indices[i]] = this._currentDiff.oldValues[i];
+      }
+    }
+    
+    const [sx, sy, sz] = this.state.regionGrowSeed;
+    const { regionGrowMin, regionGrowMax, activeLabel, multiSlice } = this.state;
+    const [dimX, dimY, dimZ] = this.dims;
+    const sliceRange = Math.floor((multiSlice - 1) / 2);
+
+    // Compute depth bounds based on axis
+    let minD, maxD;
+    if (this.axis === 'axial') { minD = Math.max(0, sz - sliceRange); maxD = Math.min(dimZ - 1, sz + sliceRange); }
+    else if (this.axis === 'coronal') { minD = Math.max(0, sy - sliceRange); maxD = Math.min(dimY - 1, sy + sliceRange); }
+    else { minD = Math.max(0, sx - sliceRange); maxD = Math.min(dimX - 1, sx + sliceRange); }
+
+    const visited = new Uint8Array(dimX * dimY * dimZ);
+    const q = [[sx, sy, sz]];
+    let head = 0; // index in q for pseudo-queue
+    const newDiff = { indices: [], oldValues: [] };
+
+    const startIdx = sz * dimX * dimY + sy * dimX + sx;
+    visited[startIdx] = 1;
+
+    // 6-connectivity neighbors
+    const neighbors = [
+        [1, 0, 0], [-1, 0, 0],
+        [0, 1, 0], [0, -1, 0],
+        [0, 0, 1], [0, 0, -1]
+    ];
+
+    while (head < q.length) {
+        const [cx, cy, cz] = q[head++];
+        const idx = cz * dimX * dimY + cy * dimX + cx;
+        const val = this.volume[idx];
+
+        if (val >= regionGrowMin && val <= regionGrowMax) {
+            newDiff.indices.push(idx);
+            newDiff.oldValues.push(this.state.segVolume[idx]);
+            this.state.segVolume[idx] = activeLabel;
+
+            for (const [dx, dy, dz] of neighbors) {
+                const nx = cx + dx;
+                const ny = cy + dy;
+                const nz = cz + dz;
+
+                if (nx >= 0 && nx < dimX && ny >= 0 && ny < dimY && nz >= 0 && nz < dimZ) {
+                    let depthOut = false;
+                    if (this.axis === 'axial' && (nz < minD || nz > maxD)) depthOut = true;
+                    if (this.axis === 'coronal' && (ny < minD || ny > maxD)) depthOut = true;
+                    if (this.axis === 'sagittal' && (nx < minD || nx > maxD)) depthOut = true;
+
+                    if (!depthOut) {
+                        const nIdx = nz * dimX * dimY + ny * dimX + nx;
+                        if (!visited[nIdx]) {
+                            visited[nIdx] = 1;
+                            q.push([nx, ny, nz]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    this._currentDiff = newDiff;
+    this.state.notify();
   }
 
   /**

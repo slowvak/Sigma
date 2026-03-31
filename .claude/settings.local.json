@@ -33,7 +33,9 @@
       "Bash(uv run:*)",
       "Bash(npm:*)",
       "Bash(npx jest:*)",
-      "Skill(gsd:new-milestone)"
+      "Skill(gsd:new-milestone)",
+      "Bash(git rebase:*)",
+      "Bash(GIT_EDITOR=true git rebase --continue)"
     ]
   }
 }

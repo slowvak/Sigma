@@ -93,6 +93,8 @@ async function openVolume(volume, { detailPanel, sidebar, toolPanel }) {
               value: lb.value,
               color: lb.color || { r: 200, g: 200, b: 200 },
               isVisible: true,
+              regionGrowMin: lb.regionGrowMin,
+              regionGrowMax: lb.regionGrowMax
             });
           }
         }
@@ -108,7 +110,13 @@ async function openVolume(volume, { detailPanel, sidebar, toolPanel }) {
       const labels = [];
       for (const [val, lb] of state.labels) {
         if (val === 0) continue;
-        labels.push({ value: val, name: lb.name, color: lb.color });
+        labels.push({ 
+          value: val, 
+          name: lb.name, 
+          color: lb.color,
+          regionGrowMin: lb.regionGrowMin,
+          regionGrowMax: lb.regionGrowMax
+        });
       }
       fetch(`/api/v1/volumes/${volume.id}/labels`, {
         method: 'PUT',
@@ -316,6 +324,7 @@ function _setupToolPanel(toolPanel, state, metadata) {
   toolSec.innerHTML = `
     <button class="tool-btn" data-tool="crosshair" style="flex:1;padding:6px;border:1px solid #ccc;border-radius:4px;cursor:pointer;">⌖</button>
     <button class="tool-btn" data-tool="paint" title="Paint" style="flex:1;padding:6px;border:1px solid #ccc;border-radius:4px;cursor:pointer;">🖌</button>
+    <button class="tool-btn" data-tool="region-grow" title="Region Grow" style="flex:1;padding:6px;border:1px solid #ccc;border-radius:4px;cursor:pointer;">✨</button>
     <button class="tool-btn" data-tool="erase" title="Erase" style="flex:1;padding:6px;border:1px solid #ccc;border-radius:4px;cursor:pointer;">▱</button>
   `;
   toolPanel.appendChild(toolSec);
@@ -407,6 +416,105 @@ function _setupToolPanel(toolPanel, state, metadata) {
   minInput.addEventListener('change', updateConstraints);
   maxInput.addEventListener('change', updateConstraints);
 
+  // Region Grow Settings section (hidden by default)
+  const rgSec = document.createElement('div');
+  rgSec.className = 'tool-section';
+  rgSec.style.display = 'none';
+  rgSec.innerHTML = `
+    <label class="detail-label">Region Grow Range</label>
+    <div style="font-size:12px; color:#a0a0a0; margin-bottom:8px;">Target Mean: <span id="rg-mean-val">-</span></div>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div style="display:flex; align-items:center; gap:4px;">
+        <span style="width:30px;font-size:12px;">Min:</span>
+        <button id="rg-min-down" style="width:24px;border:1px solid #ccc;background:#f0f0f0;border-radius:4px;cursor:pointer;">-</button>
+        <input type="number" id="rg-min" value="${state.regionGrowMin}" style="flex:1; background:#fff; border:1px solid #ccc; border-radius:4px; padding:4px; text-align:center;">
+        <button id="rg-min-up" style="width:24px;border:1px solid #ccc;background:#f0f0f0;border-radius:4px;cursor:pointer;">+</button>
+      </div>
+      <div style="display:flex; align-items:center; gap:4px;">
+        <span style="width:30px;font-size:12px;">Max:</span>
+        <button id="rg-max-down" style="width:24px;border:1px solid #ccc;background:#f0f0f0;border-radius:4px;cursor:pointer;">-</button>
+        <input type="number" id="rg-max" value="${state.regionGrowMax}" style="flex:1; background:#fff; border:1px solid #ccc; border-radius:4px; padding:4px; text-align:center;">
+        <button id="rg-max-up" style="width:24px;border:1px solid #ccc;background:#f0f0f0;border-radius:4px;cursor:pointer;">+</button>
+      </div>
+    </div>
+  `;
+  toolPanel.appendChild(rgSec);
+
+  const rgMinInput = rgSec.querySelector('#rg-min');
+  const rgMaxInput = rgSec.querySelector('#rg-max');
+  const rgMeanVal = rgSec.querySelector('#rg-mean-val');
+
+  const updateRGRange = () => {
+    let minVal = parseInt(rgMinInput.value, 10) || 0;
+    let maxVal = parseInt(rgMaxInput.value, 10) || 0;
+    if (minVal > maxVal - 1) minVal = maxVal - 1; // Enforce min <= max - 1
+    
+    // Check if the DOM value differs (in case it was manually entered wrong)
+    if (parseInt(rgMinInput.value, 10) !== minVal) {
+      rgMinInput.value = minVal;
+    }
+
+    state.setRegionGrowRange(minVal, maxVal);
+    if (state.executeRegionGrow) {
+       state.executeRegionGrow();
+    }
+  };
+
+  const enforceStep = (input, delta) => {
+    let val = parseInt(input.value, 10);
+    if (isNaN(val)) return;
+    val += delta;
+    
+    if (input === rgMinInput) {
+        let maxVal = parseInt(rgMaxInput.value, 10) || 0;
+        if (val > maxVal - 1) val = maxVal - 1;
+    } else {
+        let minVal = parseInt(rgMinInput.value, 10) || 0;
+        if (val < minVal + 1) val = minVal + 1;
+    }
+    input.value = val;
+    updateRGRange();
+  };
+
+  rgSec.querySelector('#rg-min-down').addEventListener('click', () => enforceStep(rgMinInput, -1));
+  rgSec.querySelector('#rg-min-up').addEventListener('click', () => enforceStep(rgMinInput, 1));
+  rgSec.querySelector('#rg-max-down').addEventListener('click', () => enforceStep(rgMaxInput, -1));
+  rgSec.querySelector('#rg-max-up').addEventListener('click', () => enforceStep(rgMaxInput, 1));
+
+  rgMinInput.addEventListener('change', updateRGRange);
+  rgMaxInput.addEventListener('change', updateRGRange);
+  rgMinInput.addEventListener('input', updateRGRange);
+  rgMaxInput.addEventListener('input', updateRGRange);
+
+  const updateToolPlanes = () => {
+    if (state.activeTool === 'region-grow') {
+      rgSec.style.display = 'flex';
+      constrSec.style.display = 'none';
+    } else {
+      rgSec.style.display = 'none';
+      constrSec.style.display = 'flex';
+    }
+
+    if (state.regionGrowMean !== null) {
+      if (state.regionGrowMean % 1 !== 0) {
+        rgMeanVal.textContent = state.regionGrowMean.toFixed(1);
+      } else {
+        rgMeanVal.textContent = state.regionGrowMean;
+      }
+    } else {
+      rgMeanVal.textContent = '-';
+    }
+    
+    if (state.regionGrowMin !== parseInt(rgMinInput.value, 10)) {
+        rgMinInput.value = state.regionGrowMin;
+    }
+    if (state.regionGrowMax !== parseInt(rgMaxInput.value, 10)) {
+        rgMaxInput.value = state.regionGrowMax;
+    }
+  };
+  state.subscribe(updateToolPlanes);
+  updateToolPlanes();
+
   // Overlay opacity slider
   const opacitySec = document.createElement('div');
   opacitySec.className = 'tool-section';
@@ -431,6 +539,48 @@ function _setupToolPanel(toolPanel, state, metadata) {
   labelsSec.style.overflowY = 'auto';
   toolPanel.appendChild(labelsSec);
   
+  const DEFAULT_LABEL_COLORS = [
+      null,                        // 0 = background, not used
+      { r: 255, g: 0,   b: 0   }, // 1 = red
+      { r: 0,   g: 255, b: 0   }, // 2 = green
+      { r: 0,   g: 0,   b: 255 }, // 3 = blue
+      { r: 255, g: 255, b: 0   }, // 4 = yellow
+      { r: 0,   g: 255, b: 255 }, // 5 = cyan
+      { r: 255, g: 0,   b: 255 }, // 6 = magenta
+  ];
+
+  const handleAddLabel = () => {
+      if (!state.segVolume) {
+          const [dx, dy, dz] = state.dims;
+          state.setSegmentation(new Uint8Array(dx*dy*dz), state.dims, []);
+      }
+      const name = prompt("Enter label name:", "New Label");
+      if (name) {
+          // Determine next label value
+          const nextVal = state.labels.size > 0 ? Math.max(...state.labels.keys()) + 1 : 1;
+          let color;
+          if (nextVal < DEFAULT_LABEL_COLORS.length) {
+              color = DEFAULT_LABEL_COLORS[nextVal];
+          } else {
+              const hex = prompt("Enter color (hex, e.g. #ff8800):", "#ff8800");
+              if (!hex) return false;
+              const m = hex.match(/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+              if (m) {
+                  color = { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
+              } else {
+                  alert("Invalid hex color. Use format #rrggbb");
+                  return false;
+              }
+          }
+          const val = state.addLabel(name, color);
+          if (val !== null) state.setActiveLabel(val);
+          return true;
+      }
+      return false;
+  };
+
+  state.onLabelRequired = handleAddLabel;
+
   const renderLabels = () => {
     labelsSec.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
@@ -439,43 +589,7 @@ function _setupToolPanel(toolPanel, state, metadata) {
       </div>
     `;
     
-    const DEFAULT_LABEL_COLORS = [
-        null,                        // 0 = background, not used
-        { r: 255, g: 0,   b: 0   }, // 1 = red
-        { r: 0,   g: 255, b: 0   }, // 2 = green
-        { r: 0,   g: 0,   b: 255 }, // 3 = blue
-        { r: 255, g: 255, b: 0   }, // 4 = yellow
-        { r: 0,   g: 255, b: 255 }, // 5 = cyan
-        { r: 255, g: 0,   b: 255 }, // 6 = magenta
-    ];
-
-    labelsSec.querySelector('#add-label-btn').addEventListener('click', () => {
-        if (!state.segVolume) {
-            const [dx, dy, dz] = state.dims;
-            state.setSegmentation(new Uint8Array(dx*dy*dz), state.dims, []);
-        }
-        const name = prompt("Enter label name:", "New Label");
-        if (name) {
-            // Determine next label value
-            const nextVal = state.labels.size > 0 ? Math.max(...state.labels.keys()) + 1 : 1;
-            let color;
-            if (nextVal < DEFAULT_LABEL_COLORS.length) {
-                color = DEFAULT_LABEL_COLORS[nextVal];
-            } else {
-                const hex = prompt("Enter color (hex, e.g. #ff8800):", "#ff8800");
-                if (!hex) return;
-                const m = hex.match(/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
-                if (m) {
-                    color = { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
-                } else {
-                    alert("Invalid hex color. Use format #rrggbb");
-                    return;
-                }
-            }
-            const val = state.addLabel(name, color);
-            if (val !== null) state.setActiveLabel(val);
-        }
-    });
+    labelsSec.querySelector('#add-label-btn').addEventListener('click', handleAddLabel);
 
     for (const [val, label] of state.labels) {
       if (val === 0) continue; // Skip background label in toggles

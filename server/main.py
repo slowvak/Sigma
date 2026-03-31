@@ -423,9 +423,9 @@ def main():
 
         _save_cache(cache_path, cache_key, _catalog, _segmentation_catalog, path_reg)
 
-    print(f"\n{len(_catalog)} volume(s) ready. Starting server on http://localhost:8000")
+    print(f"\n{len(_catalog)} volume(s) ready. Starting server on http://localhost:8050")
     print("Volume data will be loaded on demand when opened in the viewer.")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8050)
 
 
 if __name__ == "__main__":

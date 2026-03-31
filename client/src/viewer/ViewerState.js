@@ -58,6 +58,14 @@ export class ViewerState {
     this.colorLUT = null;           // Uint8Array(768) — built from labels
     this.undoStack = [];            // Array of diffs { indices: [], oldValues: [] }
 
+    // Region Grow state
+    this.regionGrowSeed = null;     // [x, y, z]
+    this.regionGrowMean = null;
+    this.regionGrowMin = -1024;
+    this.regionGrowMax = 3000;
+    this.regionGrowAxis = null;     // 'axial' | 'coronal' | 'sagittal'
+    this.executeRegionGrow = null;  // Callback set by active ViewerPanel
+
     /** @type {Array<function(ViewerState): void>} */
     this.listeners = [];
   }
@@ -148,6 +156,11 @@ export class ViewerState {
 
   setActiveTool(tool) {
     this.activeTool = tool;
+    if (tool !== 'region-grow') {
+      this.regionGrowSeed = null;
+      this.regionGrowMean = null;
+      this.executeRegionGrow = null;
+    }
     this.notify();
   }
 
@@ -170,6 +183,17 @@ export class ViewerState {
     this.notify();
   }
 
+  setRegionGrowRange(min, max) {
+    this.regionGrowMin = min;
+    this.regionGrowMax = max;
+    const label = this.labels.get(this.activeLabel);
+    if (label) {
+      label.regionGrowMin = min;
+      label.regionGrowMax = max;
+    }
+    this.notify();
+  }
+
   toggleLabelVisibility(value) {
     const label = this.labels.get(value);
     if (!label) return;
@@ -180,6 +204,11 @@ export class ViewerState {
 
   setActiveLabel(value) {
     this.activeLabel = value;
+    const label = this.labels.get(value);
+    if (label && label.regionGrowMin !== undefined && label.regionGrowMax !== undefined) {
+      this.regionGrowMin = label.regionGrowMin;
+      this.regionGrowMax = label.regionGrowMax;
+    }
     this.notify();
   }
 

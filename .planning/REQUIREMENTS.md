@@ -44,9 +44,9 @@ Requirements for image server architecture redesign. Each maps to roadmap phases
 - [ ] **WATCH-03**: DICOM series arriving as multiple files are debounced (2-3s quiet window) so the volume appears once complete, not per-file
 
 ### API & Infrastructure
-- [ ] **API-01**: All server endpoints are versioned under /api/v1/ prefix
-- [ ] **API-02**: DICOM loader retains file paths for downstream WADO-RS and DICOM-SEG features
-- [ ] **API-03**: Volume list includes study_instance_uid and series_instance_uid for DICOM volumes
+- [x] **API-01**: All server endpoints are versioned under /api/v1/ prefix
+- [x] **API-02**: DICOM loader retains file paths for downstream WADO-RS and DICOM-SEG features
+- [x] **API-03**: Volume list includes study_instance_uid and series_instance_uid for DICOM volumes
 
 ### WebSocket Events
 - [ ] **WS-01**: Server pushes volume_added events via WebSocket when new volumes are discovered
@@ -98,9 +98,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| API-01 | Phase 5 | Pending |
-| API-02 | Phase 5 | Pending |
-| API-03 | Phase 5 | Pending |
+| API-01 | Phase 5 | Complete |
+| API-02 | Phase 5 | Complete |
+| API-03 | Phase 5 | Complete |
 | WATCH-01 | Phase 6 | Pending |
 | WATCH-02 | Phase 6 | Pending |
 | WATCH-03 | Phase 6 | Pending |
