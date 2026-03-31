@@ -174,17 +174,29 @@ def load_dicom_series(file_paths: list[str]) -> tuple[np.ndarray, dict]:
     if not slices:
         raise ValueError("No valid DICOM slices with pixel data and spatial attributes")
 
-    # Sort by ImagePositionPatient z-coordinate (slice position)
-    slices.sort(key=lambda s: float(s.ImagePositionPatient[2]))
+    # Extract orientation from any slice (they should be identical in a series)
+    first_unsorted = slices[0]
+    orientation = [float(v) for v in first_unsorted.ImageOrientationPatient]
+    
+    # Compute the normal vector (slice direction) using the cross product
+    row_cosine = np.array(orientation[:3])
+    col_cosine = np.array(orientation[3:6])
+    slice_cosine = np.cross(row_cosine, col_cosine)
 
-    # Extract geometry from first slice
+    def get_slice_pos(s) -> float:
+        pos = np.array([float(v) for v in s.ImagePositionPatient])
+        return float(np.dot(pos, slice_cosine))
+
+    # Sort slices by their physical projection along the slice normal
+    slices.sort(key=get_slice_pos)
+
+    # Re-extract geometry from the true first slice
     first = slices[0]
-    orientation = [float(v) for v in first.ImageOrientationPatient]
     position = [float(v) for v in first.ImagePositionPatient]
     pixel_spacing = [float(v) for v in first.PixelSpacing]
 
     # Collect slice positions for affine computation
-    slice_positions = [float(s.ImagePositionPatient[2]) for s in slices]
+    slice_positions = [get_slice_pos(s) for s in slices]
 
     # Assemble 3D volume (rows x cols x slices)
     rows, cols = first.Rows, first.Columns
