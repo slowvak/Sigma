@@ -1,206 +1,278 @@
-# Technology Stack
+# Stack Research: v2.0 New Dependencies
 
-**Project:** NextEd - Web-Based Medical Image Viewer/Editor
-**Researched:** 2026-03-24
-**Overall confidence:** MEDIUM (versions from training data, not live-verified -- verify with `uv pip install` / `npm info` before pinning)
+**Domain:** Medical image server -- folder monitoring, DICOMweb, WebSocket events, DICOM-SEG
+**Researched:** 2026-03-30
+**Confidence:** HIGH (versions verified via PyPI/web search; integration patterns confirmed)
 
-## Recommended Stack
+This document covers ONLY the new dependencies required for the v2.0 milestone. The existing stack (FastAPI, pydicom, nibabel, numpy, scipy, scikit-image, Vite, vanilla JS) is validated and unchanged.
 
-### Backend: Python Server
+## New Server Dependencies
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Python | >=3.11 | Runtime | 3.11+ for performance gains (faster startup, cheaper exceptions). 3.12 fine too. | HIGH |
-| FastAPI | >=0.115 | HTTP API framework | Project requirement. Async by default, auto OpenAPI docs, excellent for streaming binary data. | HIGH |
-| uvicorn | >=0.30 | ASGI server | Standard production server for FastAPI. Use `--reload` in dev. | HIGH |
-| pydicom | >=2.4 | DICOM file I/O | The only serious Python DICOM library. Reads pixel data, tags, series grouping. | HIGH |
-| nibabel | >=5.2 | NIfTI file I/O | Standard Python NIfTI reader. Loads .nii and .nii.gz, exposes header metadata (affine, voxel spacing). | HIGH |
-| numpy | >=1.26 | Array operations | Backbone for all voxel data manipulation. Required by pydicom and nibabel anyway. | HIGH |
-| scikit-image | >=0.22 | Image processing algorithms | Otsu thresholding (`skimage.filters.threshold_otsu`), region growing, morphological ops. Mature, well-tested. | HIGH |
-| scipy | >=1.12 | Scientific computing | `scipy.ndimage` for connected-component labeling in region grow. Flood fill via `scipy.ndimage.label`. | HIGH |
-| python-multipart | >=0.0.9 | Form data parsing | Required by FastAPI for file upload endpoints (Save As). | HIGH |
-| highdicom | >=0.23 | DICOM-SEG writing | For saving segmentation as DICOM-SEG format. Only needed if DICOM-SEG export is implemented. | MEDIUM |
-| uv | latest | Package management | Project requirement (not pip). | HIGH |
+### Core Technologies
 
-### Frontend: JavaScript Client
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| watchdog | >=6.0 | Filesystem monitoring | Cross-platform (macOS FSEvents, Linux inotify, Windows ReadDirectoryChangesW). Mature, well-maintained (latest 6.0.0, Nov 2024). Python 3.9+. The standard Python library for filesystem events -- no serious alternative exists. |
+| highdicom | >=0.24 | DICOM-SEG creation | Already in v1.0 STACK.md at >=0.23 but LABELMAP segmentation type (ideal for our uint8 label maps) requires >=0.24. Current release is 0.27.0 (Oct 2025). Use `>=0.24` to get LABELMAP support. |
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| Vanilla JS + HTML5 Canvas | ES2022+ | Core rendering | **No framework.** This is a pixel-pushing application, not a CRUD app. React/Vue add overhead and fight you on canvas. Direct DOM + Canvas 2D API gives full control over pixel rendering, compositing, and mouse events. | HIGH |
-| Vite | >=5.0 | Build tool / dev server | Fast HMR, ES module native, zero-config for vanilla JS. Proxy API requests to FastAPI in dev. | HIGH |
-| pako | >=2.1 | Gzip decompression | Decompress .nii.gz data client-side if serving raw compressed volumes. Small, fast, no dependencies. | MEDIUM |
+### What Does NOT Need Adding
 
-### Why NOT These Alternatives
+| Capability | Why No New Dependency |
+|------------|----------------------|
+| **WebSocket server** | FastAPI includes WebSocket support via Starlette. `@app.websocket("/ws")` just works. No additional library needed. |
+| **DICOMweb WADO-RS** | Implement as custom FastAPI endpoints using pydicom (already installed). WADO-RS is a REST convention for URL structure and multipart response format -- not a library you install. The standard defines URL patterns and `multipart/related` responses which FastAPI can produce directly. |
+| **JSON serialization** | stdlib `json` module handles all catalog/event serialization. |
+| **Async file watching** | watchdog's Observer runs in its own thread. Bridge to async FastAPI via `asyncio.get_event_loop().call_soon_threadsafe()` -- no wrapper library needed. |
 
-| Technology | Why Not |
-|------------|---------|
-| **React / Vue / Svelte** | This app is 90% canvas pixel manipulation. Frameworks add complexity for DOM management you barely need. The viewer panels, sliders, and tool panel are simple enough for vanilla JS. Frameworks fight canvas -- they want to own the DOM, but your rendering loop owns the canvas. |
-| **Cornerstone.js / OHIF** | Cornerstone is a full DICOM viewer framework with its own loader pipeline, metadata system, and rendering engine. It is designed for DICOM-web servers, not custom FastAPI backends serving raw volumes. Adopting it means conforming to its architecture, which conflicts with the "full volume in browser memory, render slices client-side" design. You would spend more time fighting Cornerstone's abstractions than building your own slice renderer (which is ~50 lines of Canvas 2D code). |
-| **Three.js / WebGL** | Overkill for 2D slice rendering. WebGL adds GPU shader complexity for no benefit when you are drawing 2D slices with Canvas 2D `putImageData`. WebGL matters for 3D volume rendering, which is explicitly out of scope. |
-| **nifti-reader-js** | Small library for parsing NIfTI headers in JS. Unnecessary here because the server parses NIfTI with nibabel and serves raw volume data as binary ArrayBuffer. The client does not need to parse NIfTI format -- it receives pre-processed voxel arrays. |
-| **ITK-wasm** | WebAssembly build of ITK for browser-side image processing. Heavy (~10MB+ WASM), complex build pipeline. Your processing (Otsu, region grow) happens server-side in Python where scipy/scikit-image already excel. |
-| **Papaya / BrainBrowser** | Legacy academic viewers, unmaintained. Not suitable as dependencies. |
-| **Django** | Heavier than FastAPI, synchronous by default, ORM unnecessary for this file-based app. |
-| **Flask** | No async, no auto-docs, no streaming response helpers. FastAPI is strictly better here. |
-| **pip** | Project constraint: use uv. |
+## Detailed Technology Analysis
 
-## Architecture: Why Vanilla JS for the Client
+### watchdog >=6.0 -- Filesystem Monitoring
 
-This deserves extra rationale because "no framework" is a strong recommendation.
+**What it does:** Monitors directory trees for file creation, deletion, modification, and move events using OS-native APIs.
 
-**The application has two distinct UI zones:**
+**Key classes:**
+- `watchdog.observers.Observer` -- thread that schedules directory watches
+- `watchdog.events.FileSystemEventHandler` -- subclass to handle on_created, on_deleted, on_modified, on_moved
 
-1. **Control UI** (volume list, tool panel, sliders, labels) -- Simple DOM elements. A framework helps here but vanilla JS handles it fine with ~200 lines of DOM manipulation.
+**Integration with FastAPI:**
+The Observer runs in a daemon thread started during FastAPI `lifespan` startup. When filesystem events fire (synchronous callback on Observer's thread), use `asyncio.get_event_loop().call_soon_threadsafe()` to dispatch to the async event loop, which then pushes events through WebSocket connections.
 
-2. **Viewer canvases** (the 4-panel display, segmentation overlay, painting) -- This is 80% of the application complexity. It involves:
-   - Rendering slices from a typed array (`Float32Array` / `Int16Array`) to `ImageData` via window/level transform
-   - Compositing segmentation overlay with alpha blending
-   - Handling mouse events for painting, erasing, ROI drawing, window/level adjustment
-   - Managing undo history as typed array snapshots
+```python
+# Conceptual integration pattern
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import asyncio
 
-Frameworks add indirection between your code and the canvas. Every mouse event goes through synthetic event systems. State management libraries add overhead to what is fundamentally an imperative pixel loop. The canonical approach for medical image viewers in the browser is direct canvas manipulation.
+class VolumeEventHandler(FileSystemEventHandler):
+    def __init__(self, loop, callback):
+        self.loop = loop
+        self.callback = callback
 
-**If the control UI becomes complex enough to want a framework later**, you can incrementally adopt one (e.g., mount a small Svelte component for the label editor). But start vanilla.
-
-## Data Transfer Architecture
-
-### Volume Transfer: Server to Client
-
-The server should send volume data as raw binary `ArrayBuffer` over HTTP, not JSON-encoded arrays.
-
-```
-GET /api/volumes/{id}/data
-Response: application/octet-stream
-  - Header bytes: dtype (1 byte), ndim (1 byte), shape (3x uint32)
-  - Payload: raw voxel data as typed array
+    def on_created(self, event):
+        if not event.is_directory:
+            self.loop.call_soon_threadsafe(
+                asyncio.ensure_future,
+                self.callback(event.src_path, "created")
+            )
 ```
 
-**Why:** A 512x512x400 float32 volume is ~400MB. JSON encoding would balloon this. Raw binary transfer + `ArrayBuffer` on the client is the only viable approach.
+**Why NOT polling:** watchdog uses OS-native APIs (FSEvents on macOS, inotify on Linux) which are instant and use zero CPU. Polling (e.g., comparing directory listings on a timer) wastes CPU and has latency.
 
-**Compression:** Use HTTP gzip (`Content-Encoding: gzip`) for transfer compression. FastAPI + uvicorn handle this via `GZipMiddleware`. The client's `fetch()` decompresses automatically. This is simpler than manual pako decompression.
+**Why NOT watchfiles (formerly watchgod):** watchfiles is a Rust-based alternative used by uvicorn internally for `--reload`. It is simpler but lower-level -- no event handler abstraction, no recursive scheduling API, and its primary audience is dev-tool authors, not application code. watchdog's `Observer` + `FileSystemEventHandler` pattern maps cleanly to the catalog update workflow.
 
-### Slice Rendering: Client-Side
+**Debouncing consideration:** DICOM series arrive as many files (one per slice). A single CT scan may trigger 200+ `on_created` events in rapid succession. The handler must debounce -- collect events for a configurable window (e.g., 2 seconds of quiet) before triggering catalog re-scan of the affected directory. This is application logic, not a library concern.
 
-```
-1. Volume lives in Float32Array/Int16Array in browser memory
-2. On slice change: extract 2D slice from 3D array (index math, not copy)
-3. Apply window/level transform: pixel -> 0-255 grayscale
-4. Write to ImageData via Uint8ClampedArray
-5. ctx.putImageData() to canvas
-6. If segmentation loaded: composite overlay with globalAlpha
-```
+**Version rationale:** 6.0.0 fixed inotify `select.poll()` deprecation and inotify file descriptor handling. No reason to use older versions.
 
-This entire pipeline is ~50 lines of JS and runs in <5ms per slice on modern hardware.
+### highdicom >=0.24 -- DICOM-SEG Writing
 
-## Client-Side File Organization
+**What it does:** Creates standards-compliant DICOM Segmentation objects from numpy arrays and source DICOM datasets.
 
-```
-client/
-  index.html              # Entry point
-  src/
-    main.js               # App initialization, API client
-    viewer/
-      ViewerPanel.js      # Single canvas panel (slice rendering, mouse events)
-      FourPanelLayout.js  # 4-panel / single-panel layout manager
-      windowLevel.js      # W/L transform, presets, ctrl+drag handler
-    segmentation/
-      overlay.js          # Segmentation overlay compositing
-      labels.js           # Label management (colors, names, values)
-      undo.js             # 3-level undo stack (typed array snapshots)
-    tools/
-      paintbrush.js       # Paint tool with multi-slice support
-      eraser.js           # Right-click eraser (shares paintbrush logic)
-      rectangle.js        # Rectangle ROI + shift-Otsu
-      oval.js             # Oval ROI + shift-Otsu
-      regionGrow.js       # Region grow (delegates to server API)
-    ui/
-      volumeList.js       # Volume browser panel
-      toolPanel.js        # Left-side tool controls
-      sliders.js          # Slice navigation, transparency, pixel range
-      dialogs.js          # Segmentation file picker, save-as
-    utils/
-      arrayOps.js         # Typed array slice extraction, reshape
-      colormap.js         # Label color generation
-  vite.config.js          # Dev proxy to FastAPI
+**Why >=0.24 specifically:** Version 0.24.0 introduced the LABELMAP segmentation type (from DICOM 2024c standard). This stores non-overlapping segments where pixel value = segment membership -- exactly matching NextEd's uint8 label mask format. Prior versions only supported BINARY and FRACTIONAL types, which require per-segment binary planes (wasteful for multi-label masks).
+
+**Key API:**
+
+```python
+import highdicom as hd
+import numpy as np
+
+seg = hd.seg.Segmentation(
+    source_images=source_dcm_datasets,     # list[pydicom.Dataset]
+    pixel_array=label_mask,                 # np.ndarray, shape (Z, Y, X), dtype uint8
+    segmentation_type=hd.seg.SegmentationTypeValues.LABELMAP,
+    segment_descriptions=[
+        hd.seg.SegmentDescription(
+            segment_number=i,
+            segment_label=name,
+            segmented_property_category=...,  # CodedConcept
+            segmented_property_type=...,      # CodedConcept
+            algorithm_type=hd.seg.SegmentAlgorithmTypeValues.MANUAL,
+        )
+        for i, name in enumerate(label_names, 1)
+    ],
+    series_instance_uid=hd.UID(),
+    series_number=100,
+    sop_instance_uid=hd.UID(),
+    instance_number=1,
+    manufacturer="NextEd",
+    device_serial_number="0",
+    software_versions="NextEd v2.0",
+)
+seg.save_as("segmentation.dcm")
 ```
 
-## Server-Side File Organization
+**Critical detail:** highdicom infers input format from array dimensions. 3D array (Z, Y, X) is treated as label map form. 4D array (segments, Z, Y, X) is treated as stacked binary segments. For NextEd's uint8 label masks, pass the 3D array directly.
+
+**Required metadata:** DICOM-SEG requires `SegmentedPropertyCategory` and `SegmentedPropertyType` coded concepts for each segment. For generic research use, use the standard coding: category = `(T-D0050, SRT, "Tissue")`, type = `(T-D0050, SRT, "Tissue")`. These are required by the DICOM standard but can be generic.
+
+**Why NOT manual pydicom construction:** DICOM-SEG has complex requirements: Shared/Per-Frame Functional Group Sequences, Segment Sequence with algorithm identification, Derivation Image Sequences linking to source images. Getting this right manually is hundreds of lines of brittle code. highdicom handles all of it correctly and is maintained by the Imaging Data Commons team (who also maintain the DICOM standard tools).
+
+### FastAPI WebSocket -- Event Streaming (No New Dependency)
+
+**What it does:** FastAPI's built-in WebSocket support (via Starlette) provides `@app.websocket()` endpoints with `await websocket.accept()`, `await websocket.send_json()`, and `await websocket.receive_text()`.
+
+**Connection manager pattern:**
+
+```python
+class ConnectionManager:
+    def __init__(self):
+        self.active: list[WebSocket] = []
+
+    async def connect(self, ws: WebSocket):
+        await ws.accept()
+        self.active.append(ws)
+
+    def disconnect(self, ws: WebSocket):
+        self.active.remove(ws)
+
+    async def broadcast(self, message: dict):
+        for ws in self.active:
+            try:
+                await ws.send_json(message)
+            except Exception:
+                self.active.remove(ws)
+```
+
+**Event types to push:**
+- `volume_added` -- new volume discovered by watcher
+- `volume_removed` -- volume files deleted
+- `segmentation_saved` -- segmentation written to disk
+
+**Client reconnection:** The browser `WebSocket` API does not auto-reconnect. The client needs a simple reconnect loop with exponential backoff. This is ~15 lines of JS.
+
+**Why NOT socket.io / python-socketio:** Socket.IO adds rooms, namespaces, automatic reconnection, and fallback transports (long-polling). NextEd is single-user, local-only, with one event channel. Socket.IO's abstractions are unnecessary overhead and add two dependencies (python-socketio, python-engineio). Native WebSocket is simpler and sufficient.
+
+**Why NOT Server-Sent Events (SSE):** SSE is unidirectional (server to client only). While sufficient for push notifications, WebSocket allows future bidirectional communication (e.g., client requesting catalog refresh, sending commands). The implementation complexity is nearly identical.
+
+### DICOMweb WADO-RS -- Custom Endpoints (No New Dependency)
+
+**What it does:** WADO-RS defines REST URL patterns for retrieving DICOM objects. The key endpoints for NextEd:
 
 ```
-server/
-  main.py                 # FastAPI app, startup catalog
-  catalog/
-    scanner.py            # Walk folder tree, identify NIfTI/DICOM files
-    models.py             # Pydantic models for volume metadata
-    dicom_grouper.py      # Group DICOM files by series_instance_uid
-  loaders/
-    nifti_loader.py       # Load NIfTI volume + header with nibabel
-    dicom_loader.py       # Assemble DICOM series into volume with pydicom
-  processing/
-    otsu.py               # Otsu threshold within ROI
-    region_grow.py        # Seeded region growing
-    histogram.py          # 5th-95th percentile for auto W/L
-  api/
-    volumes.py            # Volume list, metadata, data endpoints
-    segmentation.py       # Save segmentation (NIfTI + DICOM-SEG)
-  pyproject.toml          # uv project config
+GET /api/v1/wado-rs/studies/{study}/series/{series}/instances/{instance}
+  Accept: multipart/related; type=application/dicom
+  Response: multipart/related containing DICOM Part 10 file bytes
+
+GET /api/v1/wado-rs/studies/{study}/series/{series}
+  Accept: multipart/related; type=application/dicom
+  Response: multipart/related containing all instances in series
 ```
+
+**Implementation approach:** FastAPI `StreamingResponse` with `multipart/related` content type. Each DICOM instance is a MIME part with `Content-Type: application/dicom`. pydicom reads the files, and we stream the raw bytes.
+
+**Scope decision:** Implement ONLY retrieve (WADO-RS), not store (STOW-RS) or query (QIDO-RS). NextEd discovers volumes from the filesystem, not from network DICOM operations. WADO-RS is implemented so that external DICOM viewers could consume NextEd's served volumes -- interoperability, not ingestion.
+
+**Why NOT dicomweb-client:** That library is a client for consuming DICOMweb servers. NextEd IS the server. There is no Python library for serving DICOMweb -- you implement the REST convention in your framework.
+
+**Multipart response format:**
+
+```
+Content-Type: multipart/related; type="application/dicom"; boundary=boundary123
+
+--boundary123
+Content-Type: application/dicom
+
+[DICOM Part 10 bytes for instance 1]
+--boundary123
+Content-Type: application/dicom
+
+[DICOM Part 10 bytes for instance 2]
+--boundary123--
+```
+
+This is straightforward to construct with FastAPI's `StreamingResponse` and a generator function.
 
 ## Installation
 
 ```bash
-# Server (using uv)
-uv init server
-cd server
-uv add fastapi uvicorn[standard] pydicom nibabel numpy scipy scikit-image python-multipart
-uv add highdicom  # only if DICOM-SEG export needed
-
-# Client
-npm create vite@latest client -- --template vanilla
-cd client
-npm install pako
+# New dependencies only (run from server/)
+uv add "watchdog>=6.0" "highdicom>=0.24"
 ```
 
-## Development Workflow
+**Updated pyproject.toml dependencies block will be:**
 
-```bash
-# Terminal 1: Backend
-cd server && uv run uvicorn main:app --reload --port 8000
-
-# Terminal 2: Frontend
-cd client && npm run dev
-# vite.config.js proxies /api/* to localhost:8000
+```toml
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "pydicom>=2.4",
+    "nibabel>=5.2",
+    "numpy>=1.26",
+    "scipy>=1.12",
+    "scikit-image>=0.22",
+    "python-multipart>=0.0.9",
+    "watchdog>=6.0",
+    "highdicom>=0.24",
+]
 ```
 
-## Key Version Notes
-
-**IMPORTANT:** All version numbers above are from training data (cutoff May 2025). Before pinning versions in `pyproject.toml` or `package.json`, verify current stable releases:
-
-```bash
-uv pip install --dry-run fastapi pydicom nibabel numpy scipy scikit-image
-npm info vite version
-npm info pako version
-```
-
-The recommendations (which libraries to use) are HIGH confidence. The exact version numbers are LOW confidence and should be verified.
-
-## Sources
-
-- Training data knowledge of Python medical imaging ecosystem (pydicom, nibabel, scipy, scikit-image are the canonical libraries -- this has been stable for 5+ years)
-- Training data knowledge of FastAPI architecture patterns
-- Training data knowledge of Canvas 2D API for medical image rendering
-- No live sources were available (WebSearch/WebFetch denied); all version numbers need verification
+No new client-side (npm) dependencies are needed. WebSocket is a browser-native API.
 
 ## Alternatives Considered
 
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| Backend framework | FastAPI | Django, Flask | FastAPI: async, streaming responses, auto-docs. Project requirement. |
-| DICOM I/O | pydicom | SimpleITK | pydicom is lower-level, gives direct tag access needed for series grouping |
-| NIfTI I/O | nibabel | SimpleITK, ITK | nibabel is purpose-built for NIfTI, lighter weight, Pythonic API |
-| Image processing | scikit-image + scipy | OpenCV (cv2) | scikit-image has cleaner Python API, scipy.ndimage for connected components. OpenCV's Python bindings are clunky and it drags in a huge C++ library. |
-| Frontend framework | Vanilla JS | React, Vue, Svelte | Canvas-heavy app; framework overhead not justified (see rationale above) |
-| Build tool | Vite | Webpack, Parcel | Vite is fastest DX, ESM-native, minimal config |
-| Viewer library | Custom canvas | Cornerstone.js, OHIF | Cornerstone assumes DICOM-web, fights custom backend architecture |
-| DICOM-SEG output | highdicom | pydicom raw | highdicom handles DICOM-SEG standard compliance correctly; doing it manually with pydicom is error-prone |
-| Package manager | uv | pip, poetry, pdm | Project requirement |
+| Recommended | Alternative | When to Use Alternative |
+|-------------|-------------|-------------------------|
+| watchdog | watchfiles (Rust-based) | If you only need simple "files changed" notifications without event type classification. watchfiles is faster for large directory trees but lacks the event handler abstraction. |
+| watchdog | Manual polling (os.scandir loop) | Never. Polling wastes CPU and has latency. OS-native watchers are strictly superior. |
+| highdicom LABELMAP | highdicom BINARY | If segments can overlap (e.g., "lung" and "tumor" can share voxels). BINARY stores per-segment planes. NextEd uses non-overlapping labels, so LABELMAP is correct. |
+| highdicom | dcmqi (C++ tool) | If you need CLI batch conversion outside Python. Not suitable as a library dependency. |
+| Native WebSocket | python-socketio | If scaling to multiple server instances with many concurrent users. NextEd is single-user local. |
+| Native WebSocket | SSE (Server-Sent Events) | If you are certain no client-to-server messages will ever be needed. WebSocket keeps the door open. |
+| Custom WADO-RS | Orthanc (C++ DICOM server) | If you need a full-featured PACS. Orthanc is a separate server process, not a library. Overkill for NextEd's use case. |
+
+## What NOT to Use
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| python-socketio / socket.io | Adds 2 dependencies, rooms/namespaces complexity for a single-user app | FastAPI native WebSocket |
+| watchgod (old name) | Renamed to watchfiles, watchgod is unmaintained | watchdog (different project entirely) |
+| highdicom < 0.24 | No LABELMAP support; forced to use BINARY with per-segment planes | highdicom >= 0.24 |
+| aiofiles for watching | aiofiles is for async file I/O, not filesystem monitoring | watchdog |
+| hachiko (async watchdog wrapper) | Unmaintained (last commit 2019), unnecessary since Observer thread + call_soon_threadsafe works fine | watchdog directly |
+| dicomweb-server packages | No mature Python DICOMweb server library exists; the few that do are unmaintained or tightly coupled to their own storage backends | Custom FastAPI endpoints |
+
+## Version Compatibility
+
+| Package | Compatible With | Notes |
+|---------|-----------------|-------|
+| watchdog >=6.0 | Python >=3.9 | NextEd requires Python >=3.11, so no conflict |
+| highdicom >=0.24 | pydicom >=2.0, numpy >=1.21 | NextEd already has pydicom >=2.4 and numpy >=1.26, fully compatible |
+| highdicom >=0.24 | Python >=3.10 | NextEd requires >=3.11, no conflict |
+| FastAPI WebSocket | starlette (bundled) | WebSocket support is part of Starlette, which FastAPI bundles. No version concern. |
+
+## Integration Architecture Summary
+
+```
+Filesystem Events                  Client Browser
+       |                                 |
+  [watchdog Observer]              [WebSocket]
+  (daemon thread)                  (native API)
+       |                                |
+  call_soon_threadsafe          reconnect loop
+       |                                |
+  [async event handler]    <----->  [FastAPI WS endpoint]
+       |                                |
+  [catalog re-scan]             [volume list refresh]
+       |
+  [broadcast via ConnectionManager]
+       |
+  [WADO-RS endpoints]  <-- external DICOM viewers
+  [binary stream]       <-- NextEd client (NIfTI volumes)
+       |
+  [highdicom DICOM-SEG] --> save segmentation for DICOM sources
+  [nibabel NIfTI]       --> save segmentation for NIfTI sources
+```
+
+## Sources
+
+- [watchdog on PyPI](https://pypi.org/project/watchdog/) -- version 6.0.0 confirmed, Python 3.9+ requirement
+- [watchdog GitHub releases](https://github.com/gorakhargosh/watchdog/releases) -- changelog for 6.0.0 changes
+- [highdicom documentation](https://highdicom.readthedocs.io/en/latest/seg.html) -- LABELMAP API, version 0.27.0
+- [highdicom GitHub releases](https://github.com/ImagingDataCommons/highdicom/releases) -- LABELMAP introduced in 0.24.0
+- [FastAPI WebSocket docs](https://fastapi.tiangolo.com/advanced/websockets/) -- built-in WebSocket support
+- [DICOM Standard WADO-RS](https://www.dicomstandard.org/using/dicomweb/retrieve-wado-rs-and-wado-uri/) -- multipart/related response format
+- [watchdog asyncio integration gist](https://gist.github.com/mivade/f4cb26c282d421a62e8b9a341c7c65f6) -- call_soon_threadsafe pattern
+
+---
+*Stack research for: NextEd v2.0 new capabilities*
+*Researched: 2026-03-30*

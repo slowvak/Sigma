@@ -1,105 +1,82 @@
 # Requirements: NextEd
 
-**Defined:** 2026-03-24
+**Defined:** 2026-03-31
 **Core Value:** Researchers and radiologists can view and segment medical image volumes entirely in the browser with tools comparable to ITK-SNAP's core workflow.
 
-## v1 Requirements
+## v1.0 Requirements (Completed)
 
-Requirements for initial release. Each maps to roadmap phases.
+### Server & Data Pipeline
+- [x] **SRVR-01**: Server catalogs NIfTI and DICOM files from a folder tree on startup
+- [x] **SRVR-02**: DICOM files grouped into volumes by series_instance_uid
+- [x] **SRVR-03**: Server exposes volume metadata (dimensions, spacing, etc.)
+- [x] **SRVR-04**: Server loads and serves full volume data on demand
+- [x] **SRVR-05**: DICOM volumes expose Study/Series Description
+- [x] **SRVR-06**: Web client shows list of available volumes
 
-### Server & Catalog
+### Core Viewer
+- [x] **VIEW-01**: 4-panel viewer with axial, coronal, sagittal views
+- [x] **VIEW-02**: Slice navigation via slider
+- [x] **VIEW-03**: Single-view mode toggle (A/C/S buttons)
+- [x] **VIEW-04**: Window/level adjustment via drag
+- [x] **VIEW-05**: Auto W/L on open
+- [x] **VIEW-06**: CT-specific W/L presets
+- [x] **VIEW-07**: Crosshair sync across panels
 
-- [ ] **SRVR-01**: Server accepts a folder path as CLI argument and recursively catalogs all NIfTI (.nii, .nii.gz) and DICOM (.dcm, .DCM, extensionless) files
-- [ ] **SRVR-02**: DICOM files are grouped into volumes by series_instance_uid
-- [ ] **SRVR-03**: Server exposes REST API listing all cataloged volumes with metadata (path, filename, X/Y/Z dimensions, voxel spacing, file date)
-- [ ] **SRVR-04**: DICOM volumes include Study Description and Series Description in metadata
-- [ ] **SRVR-05**: Server loads and serves full volume data on demand as binary ArrayBuffer (not at catalog time)
-- [ ] **SRVR-06**: Server detects modality (CT vs MR) from DICOM Modality tag or NIfTI header heuristics
-- [ ] **SRVR-07**: Server provides region grow endpoint that performs 3D seeded flood-fill on cached volume and returns result
+### Segmentation Display & Labels
+- [x] **SEGD-01**: Segmentation overlay with per-label colors
+- [x] **SEGD-02**: Label management (add, rename, recolor)
+- [x] **SEGD-03**: Overlay transparency slider
 
-### Volume Browsing
+### Editing Tools & Save
+- [x] **EDIT-01**: Paintbrush tool with multi-slice support
+- [x] **EDIT-02**: Eraser tool
+- [x] **EDIT-03**: 3-level undo (Ctrl-Z)
+- [x] **EDIT-04**: Min/max pixel value constraints
+- [x] **SAVE-01**: Save As to .nii.gz
 
-- [ ] **BROW-01**: Web client displays list of available volumes from server
-- [ ] **BROW-02**: Clicking a DICOM volume shows Study Description and Series Description
-- [ ] **BROW-03**: Clicking a NIfTI volume shows file date
-- [ ] **BROW-04**: User can open a selected volume as the "Main" image
+## v2.0 Requirements
 
-### Viewer
+Requirements for image server architecture redesign. Each maps to roadmap phases.
 
-- [ ] **VIEW-01**: 4-panel layout: axial (upper-left), coronal (upper-right), sagittal (lower-left), blank (lower-right)
-- [ ] **VIEW-02**: Each view starts at the center slice of its dimension (z/2, y/2, x/2)
-- [ ] **VIEW-03**: Each view has a slider for slice navigation
-- [x] **VIEW-04**: Single-view toggle via A/C/S buttons; + button returns to 4-panel
-- [ ] **VIEW-05**: Full volume held in browser memory; slices rendered client-side from ArrayBuffer
-- [ ] **VIEW-06**: Correct handling of anisotropic voxel spacing in rendering (Z spacing often differs from X/Y)
-- [x] **VIEW-07**: Crosshair synchronization — clicking in one view updates slice position in other views
+### Folder Monitoring
+- [ ] **WATCH-01**: User can start the server and new NIfTI/DICOM volumes placed in watched folders are automatically discovered and appear in the volume list
+- [ ] **WATCH-02**: User sees volumes removed from the list when their files are deleted from watched folders
+- [ ] **WATCH-03**: DICOM series arriving as multiple files are debounced (2-3s quiet window) so the volume appears once complete, not per-file
 
-### Window/Level
+### API & Infrastructure
+- [ ] **API-01**: All server endpoints are versioned under /api/v1/ prefix
+- [ ] **API-02**: DICOM loader retains file paths for downstream WADO-RS and DICOM-SEG features
+- [ ] **API-03**: Volume list includes study_instance_uid and series_instance_uid for DICOM volumes
 
-- [ ] **WLVL-01**: Auto window/level on open using 5th–95th percentile histogram values
-- [x] **WLVL-02**: Manual W/L via ctrl+drag (up=brighter, down=darker, right=wider, left=narrower)
-- [x] **WLVL-03**: W/L presets: Brain (0–80), Bone (-1000 to +2000), Lung (-1000 to 0), Abd (-100 to +350)
-- [x] **WLVL-04**: Presets shown only when modality is CT; hidden for MR
+### WebSocket Events
+- [ ] **WS-01**: Server pushes volume_added events via WebSocket when new volumes are discovered
+- [ ] **WS-02**: Server pushes volume_removed events via WebSocket when volumes are deleted
+- [ ] **WS-03**: Client volume list updates reactively on WebSocket events without page reload
+- [ ] **WS-04**: Client reconnects automatically with exponential backoff after WebSocket disconnection
 
-### Segmentation Display
+### DICOMweb
+- [ ] **WADO-01**: WADO-RS endpoint serves all DICOM instances in a series as multipart/related response
+- [ ] **WADO-02**: WADO-RS metadata endpoint returns DICOM tags as JSON per PS3.18
 
-- [ ] **SEGD-01**: After opening main image, prompt dialog for associated segmentation file
-- [x] **SEGD-02**: Auto-detect segmentation file matching `<basename>_segmentation.nii.gz` pattern
-- [x] **SEGD-03**: If matching segmentation exists, pre-select it in the dialog so user just clicks OK
-- [x] **SEGD-04**: Segmentation overlay rendered on top of main image with color per label
-- [x] **SEGD-05**: User-selectable overlay transparency via 0–100 slider below object dropdown
+### Segmentation Storage
+- [ ] **SEG-01**: Segmentations for DICOM volumes are saved as DICOM-SEG format via highdicom
+- [ ] **SEG-02**: Segmentations for NIfTI volumes continue saving as _seg.nii.gz (existing behavior)
+- [ ] **SEG-03**: Format selection is automatic based on parent volume format (user does not choose)
+- [ ] **SEG-04**: Label values are remapped to contiguous 1..N for DICOM-SEG compliance
 
-### Label Management
+## Future Requirements
 
-- [ ] **LABL-01**: Each label has an integer value, text name, and color — all user-editable via double-click
-- [x] **LABL-02**: Labels start as Label1, Label2, etc.
-- [x] **LABL-03**: Changing a label's integer value updates all mask voxels with the old value to the new value
-- [ ] **LABL-04**: Label dropdown in tool panel shows labels present in loaded segmentation
-- [x] **LABL-05**: "Add object" button creates new label with lowest unused integer value (user-overridable)
-- [x] **LABL-06**: Background (0) is always present in label list
+Deferred to future milestones. Tracked but not in current roadmap.
 
-### Editing Tools
+### DICOMweb Extensions
+- **WADO-03**: WADO-RS instance-level retrieval by SOP Instance UID
+- **QIDO-01**: QIDO-RS query endpoints for searchable DICOM tag indexes
+- **STOW-01**: STOW-RS store endpoints for receiving DICOM objects via web
 
-- [x] **EDIT-01**: Paintbrush tool paints on current slice with current label
-- [x] **EDIT-02**: Multi-slice painting via slider controlling how many adjacent slices are painted simultaneously
-- [x] **EDIT-03**: Eraser via right mouse button (acts as paintbrush setting voxels to 0)
-- [x] **EDIT-04**: Min/max pixel value range slider constraining which voxel values can be painted
-- [ ] **EDIT-05**: Rectangle ROI tool for drawing rectangular regions
-- [ ] **EDIT-06**: Oval ROI tool for drawing elliptical regions
-- [ ] **EDIT-07**: Shift+draw with ROI tools applies Otsu threshold within ROI; "on" class = bitmask value with fewest members on ROI outline
-- [ ] **EDIT-08**: Region grow tool — single-click seeded, global 3D, remembers previous parameters, OK to confirm
-- [x] **EDIT-09**: 3 levels of undo via Ctrl-Z
-- [x] **EDIT-10**: Tool panel on left side with light gray background
-
-### Save
-
-- [x] **SAVE-01**: Always "Save As" — never overwrite source
-- [x] **SAVE-02**: If segmentation was loaded, suggest that filename; else suggest `<basename>_seg.nii.gz`
-- [x] **SAVE-03**: NIfTI sources save as .nii.gz
-- [ ] **SAVE-04**: DICOM sources prompt user to choose between .nii.gz and DICOM-SEG format
-
-### Keyboard & Navigation
-
-- [x] **KEYS-01**: Keyboard shortcuts for common tools (P=paintbrush, E=eraser, Z=undo, etc.)
-
-## v2 Requirements
-
-Deferred to future release. Tracked but not in current roadmap.
-
-### Viewing Enhancements
-
-- **VIEW2-01**: Zoom and pan within views (mouse wheel + middle-click drag)
-- **VIEW2-02**: Measurement tools (rulers, angles, area)
-
-### Editing Enhancements
-
-- **EDIT2-01**: Polygon/lasso segmentation tool
-- **EDIT2-02**: 3D segmentation tools (3D paintbrush, 3D morphological operations)
-
-### Infrastructure
-
-- **INFR-01**: Multi-frame DICOM support
-- **INFR-02**: DICOMweb / PACS integration
+### Advanced Features
+- **CACHE-01**: LRU eviction for volume cache to bound memory usage
+- **EDIT-05**: Rectangle and oval ROI tools with Otsu thresholding
+- **EDIT-06**: Region grow tool with seed point and parameter adjustment
 
 ## Out of Scope
 
@@ -107,15 +84,13 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
-| 3D volume rendering | Massive complexity (WebGL shaders, ray casting); separate product concern |
-| User accounts / authentication | Single-user local tool; auth adds complexity for zero value |
-| Real-time collaboration | Operational transforms on voxel data is a research project |
-| AI/ML auto-segmentation | Requires model serving infrastructure; users bring pre-computed masks |
-| Mobile/tablet support | Touch interaction for voxel-level painting is impractical |
-| Plugin/extension system | Premature abstraction for v1 |
-| Registration / co-registration | Complex ITK pipelines; assume volumes are in same space |
-| Multi-volume simultaneous viewing | One main + one segmentation at a time |
-| Annotation tools (arrows, text) | Radiology reporting feature, not segmentation |
+| STOW-RS (store via web) | NextEd monitors folders; it does not accept uploads via DICOMweb |
+| QIDO-RS (search via web) | Full search requires queryable indexes; overkill for local tool |
+| Full DICOMweb PS3.18 conformance | Spec is enormous; implement subset only (WADO-RS retrieve) |
+| Multi-frame DICOM handling | Out of scope per PROJECT.md; fundamentally different loading |
+| Authentication on WebSocket/API | Single-user local tool per project constraints |
+| DICOM-RT Structure Set export | Different IOD, contour-based, separate feature entirely |
+| Server-Sent Events (SSE) | WebSocket is bidirectional and the right choice |
 
 ## Traceability
 
@@ -123,60 +98,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SRVR-01 | Phase 1 | Pending |
-| SRVR-02 | Phase 1 | Pending |
-| SRVR-03 | Phase 1 | Pending |
-| SRVR-04 | Phase 1 | Pending |
-| SRVR-05 | Phase 1 | Pending |
-| SRVR-06 | Phase 1 | Pending |
-| SRVR-07 | Phase 5 | Pending |
-| BROW-01 | Phase 1 | Pending |
-| BROW-02 | Phase 1 | Pending |
-| BROW-03 | Phase 1 | Pending |
-| BROW-04 | Phase 1 | Pending |
-| VIEW-01 | Phase 2 | Pending |
-| VIEW-02 | Phase 2 | Pending |
-| VIEW-03 | Phase 2 | Pending |
-| VIEW-04 | Phase 2 | Complete |
-| VIEW-05 | Phase 2 | Pending |
-| VIEW-06 | Phase 2 | Pending |
-| VIEW-07 | Phase 2 | Complete |
-| WLVL-01 | Phase 2 | Pending |
-| WLVL-02 | Phase 2 | Complete |
-| WLVL-03 | Phase 2 | Complete |
-| WLVL-04 | Phase 2 | Complete |
-| SEGD-01 | Phase 3 | Pending |
-| SEGD-02 | Phase 3 | Complete |
-| SEGD-03 | Phase 3 | Complete |
-| SEGD-04 | Phase 3 | Complete |
-| SEGD-05 | Phase 3 | Complete |
-| LABL-01 | Phase 3 | Pending |
-| LABL-02 | Phase 3 | Complete |
-| LABL-03 | Phase 3 | Complete |
-| LABL-04 | Phase 3 | Pending |
-| LABL-05 | Phase 3 | Complete |
-| LABL-06 | Phase 3 | Complete |
-| EDIT-01 | Phase 4 | Complete |
-| EDIT-02 | Phase 4 | Complete |
-| EDIT-03 | Phase 4 | Complete |
-| EDIT-04 | Phase 4 | Complete |
-| EDIT-05 | Phase 5 | Pending |
-| EDIT-06 | Phase 5 | Pending |
-| EDIT-07 | Phase 5 | Pending |
-| EDIT-08 | Phase 5 | Pending |
-| EDIT-09 | Phase 4 | Complete |
-| EDIT-10 | Phase 4 | Complete |
-| SAVE-01 | Phase 4 | Complete |
-| SAVE-02 | Phase 4 | Complete |
-| SAVE-03 | Phase 4 | Complete |
-| SAVE-04 | Phase 5 | Pending |
-| KEYS-01 | Phase 4 | Complete |
+| WATCH-01 | TBD | Pending |
+| WATCH-02 | TBD | Pending |
+| WATCH-03 | TBD | Pending |
+| API-01 | TBD | Pending |
+| API-02 | TBD | Pending |
+| API-03 | TBD | Pending |
+| WS-01 | TBD | Pending |
+| WS-02 | TBD | Pending |
+| WS-03 | TBD | Pending |
+| WS-04 | TBD | Pending |
+| WADO-01 | TBD | Pending |
+| WADO-02 | TBD | Pending |
+| SEG-01 | TBD | Pending |
+| SEG-02 | TBD | Pending |
+| SEG-03 | TBD | Pending |
+| SEG-04 | TBD | Pending |
 
 **Coverage:**
-- v1 requirements: 48 total
-- Mapped to phases: 48
-- Unmapped: 0
+- v2.0 requirements: 16 total
+- Mapped to phases: 0
+- Unmapped: 16 ⚠️
 
 ---
-*Requirements defined: 2026-03-24*
-*Last updated: 2026-03-24 after roadmap creation*
+*Requirements defined: 2026-03-31*
+*Last updated: 2026-03-31 after milestone v2.0 definition*
