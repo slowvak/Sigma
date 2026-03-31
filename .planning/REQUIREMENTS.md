@@ -98,28 +98,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WATCH-01 | TBD | Pending |
-| WATCH-02 | TBD | Pending |
-| WATCH-03 | TBD | Pending |
-| API-01 | TBD | Pending |
-| API-02 | TBD | Pending |
-| API-03 | TBD | Pending |
-| WS-01 | TBD | Pending |
-| WS-02 | TBD | Pending |
-| WS-03 | TBD | Pending |
-| WS-04 | TBD | Pending |
-| WADO-01 | TBD | Pending |
-| WADO-02 | TBD | Pending |
-| SEG-01 | TBD | Pending |
-| SEG-02 | TBD | Pending |
-| SEG-03 | TBD | Pending |
-| SEG-04 | TBD | Pending |
+| API-01 | Phase 5 | Pending |
+| API-02 | Phase 5 | Pending |
+| API-03 | Phase 5 | Pending |
+| WATCH-01 | Phase 6 | Pending |
+| WATCH-02 | Phase 6 | Pending |
+| WATCH-03 | Phase 6 | Pending |
+| WS-01 | Phase 6 | Pending |
+| WS-02 | Phase 6 | Pending |
+| WS-03 | Phase 6 | Pending |
+| WS-04 | Phase 6 | Pending |
+| SEG-01 | Phase 7 | Pending |
+| SEG-02 | Phase 7 | Pending |
+| SEG-03 | Phase 7 | Pending |
+| SEG-04 | Phase 7 | Pending |
+| WADO-01 | Phase 8 | Pending |
+| WADO-02 | Phase 8 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16 ⚠️
+- Mapped to phases: 16
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-31*
-*Last updated: 2026-03-31 after milestone v2.0 definition*
+*Last updated: 2026-03-30 after roadmap creation*
