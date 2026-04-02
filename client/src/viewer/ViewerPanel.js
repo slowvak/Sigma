@@ -929,8 +929,28 @@ export class ViewerPanel {
     if (this.axis === 'axial') {
       this.state.setObliqueAzimuth(this._dragStartAzimuth + delta);
     } else {
-      const newTilt = this._dragStartTilt + this._dragSign * delta;
-      this.state.setObliqueTilt(newTilt);
+      // Decompose starting orientation into orthogonal tilt components:
+      //   tiltX = tilt * cos(azimuth)  — rotation around X, visible on sagittal
+      //   tiltY = tilt * sin(azimuth)  — rotation around Y, visible on coronal
+      // Each view modifies its own component, then recomputes (tilt, azimuth).
+      let tiltX = this._dragStartTilt * Math.cos(this._dragStartAzimuth);
+      let tiltY = this._dragStartTilt * Math.sin(this._dragStartAzimuth);
+      const tiltDelta = this._dragSign * delta;
+
+      if (this.axis === 'sagittal') {
+        tiltX += tiltDelta;
+      } else {
+        tiltY += tiltDelta;
+      }
+
+      const newTilt = Math.sqrt(tiltX * tiltX + tiltY * tiltY);
+      const newAzimuth = newTilt > 0.001
+        ? Math.atan2(tiltY, tiltX)
+        : this._dragStartAzimuth;
+      // Set both at once to avoid double-render
+      this.state.obliqueTilt = newTilt;
+      this.state.obliqueAzimuth = newAzimuth;
+      this.state.notify();
     }
   }
 
