@@ -282,7 +282,6 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
     <button class="tool-btn compact-btn" data-tool="crosshair">⌖</button>
     <button class="tool-btn compact-btn" data-tool="paint" title="Paint">🖌</button>
     <button class="tool-btn compact-btn" data-tool="region-grow" title="Region Grow">✨</button>
-    <button class="tool-btn compact-btn" data-tool="erase" title="Erase">▱</button>
   `;
   toolPanel.appendChild(toolSec);
 
@@ -685,8 +684,28 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
     
     labelsSec.querySelector('#add-label-btn').addEventListener('click', handleAddLabel);
 
+    // Always show label 0 (background/erase) at top
+    {
+      const row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.alignItems = 'center';
+      row.style.marginBottom = '2px';
+      row.style.padding = '4px';
+      row.style.borderRadius = '4px';
+      row.style.cursor = 'pointer';
+      if (state.activeLabel === 0) row.style.background = '#e0e0e0';
+      row.innerHTML = `
+        <div style="width:12px;height:12px;background:#fff;margin-right:8px;border-radius:2px;border:1px solid #999;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:-1px;left:4px;color:#c00;font-size:14px;line-height:12px;">╲</div>
+        </div>
+        <span style="font-size:12px;flex:1;color:#888;">Erase</span>
+      `;
+      row.addEventListener('click', () => state.setActiveLabel(0));
+      labelsSec.appendChild(row);
+    }
+
     for (const [val, label] of state.labels) {
-      if (val === 0) continue; // Skip background label in toggles
+      if (val === 0) continue;
       const row = document.createElement('div');
       row.style.display = 'flex';
       row.style.alignItems = 'center';

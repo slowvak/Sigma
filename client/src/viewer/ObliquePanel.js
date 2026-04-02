@@ -117,21 +117,17 @@ export class ObliquePanel {
         this._lastWLX = e.clientX;
         this._lastWLY = e.clientY;
         this.canvas.style.cursor = 'grab';
-      } else if (this.state.activeTool === 'paint' || this.state.activeTool === 'erase') {
+      } else if (this.state.activeTool === 'paint') {
         e.preventDefault();
         // Ensure label/segVolume exist BEFORE starting paint drag.
-        // onLabelRequired shows a blocking prompt() that swallows mouseup,
-        // so after prompting we return — the next click will start painting.
-        if (this.state.activeTool === 'paint') {
-          if (!this.state.segVolume || this.state.activeLabel === 0) {
-            if (typeof this.state.onLabelRequired === 'function') {
-              this.state.onLabelRequired();
-            }
-            return; // Always return after prompt — mouseup is lost
+        // Label 0 = erase, so only prompt when no labels exist at all.
+        if (!this.state.segVolume && this.state.activeLabel !== 0) {
+          if (typeof this.state.onLabelRequired === 'function') {
+            this.state.onLabelRequired();
           }
-        } else if (this.state.activeTool === 'erase') {
-          if (!this.state.segVolume) return;
+          return;
         }
+        if (!this.state.segVolume) return;
         if (this._currentDiff && !this._isPainting) {
           delete this._currentDiff.seen;
           this.state.pushUndo(this._currentDiff);
@@ -283,7 +279,7 @@ export class ObliquePanel {
           const val = this.volume[idx];
           if (val < paintConstraintMin || val > paintConstraintMax) continue;
 
-          const newVal = activeTool === 'paint' ? activeLabel : 0;
+          const newVal = activeLabel;
           const currentVal = this.state.segVolume[idx];
           if (currentVal !== newVal) {
             if (this._currentDiff && !this._currentDiff.seen.has(idx)) {
@@ -486,7 +482,7 @@ export class ObliquePanel {
 
   _updateCursor() {
     const tool = this.state.activeTool;
-    if (tool === 'paint' || tool === 'erase') {
+    if (tool === 'paint') {
       const voxelRadius = this.state.brushRadius;
       const scaleX = this.canvas.clientWidth / this.canvas.width;
       const diameter = Math.max(4, Math.round(voxelRadius * 2 * scaleX));
