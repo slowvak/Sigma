@@ -462,6 +462,15 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
   actionRow.appendChild(propagateBtn);
   toolPanel.appendChild(actionRow);
 
+  // AI button
+  const aiBtn = document.createElement('button');
+  aiBtn.className = 'compact-btn';
+  aiBtn.textContent = '🤖 AI';
+  aiBtn.title = 'Run AI model on current volume';
+  aiBtn.style.cssText = 'width:100%;margin-top:4px;padding:4px 8px;font-size:12px;';
+  aiBtn.addEventListener('click', () => _showAIModelPicker(state, metadata));
+  toolPanel.appendChild(aiBtn);
+
   // Settings section
   const settingsSec = document.createElement('div');
   settingsSec.className = 'tool-section compact';
@@ -749,6 +758,200 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
   renderLabels();
   // Subscribe to state to update labels if they change
   state.subscribe(renderLabels);
+}
+
+async function _showAIModelPicker(state, metadata) {
+  // Fetch available models
+  let models;
+  try {
+    const resp = await fetch('/api/v1/ai/models');
+    models = await resp.json();
+  } catch (e) {
+    alert('Could not load AI models: ' + e.message);
+    return;
+  }
+
+  if (!models || models.length === 0) {
+    alert('No AI models configured. Add models to models/ai-models.json');
+    return;
+  }
+
+  // Build modal
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;';
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'background:#1e1e1e;padding:24px;border-radius:8px;width:420px;border:1px solid #3a3a3a;box-shadow:0 10px 30px rgba(0,0,0,0.5);color:#e0e0e0;max-height:80vh;overflow-y:auto;';
+
+  let html = '<h2 style="margin-top:0;font-size:18px;margin-bottom:16px;">Run AI Model</h2>';
+  html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+
+  for (const model of models) {
+    const acceptsLabel = model.accepts_labels ? ' (uses existing labels)' : '';
+    html += `
+      <div class="ai-model-option" data-model-id="${model.id}"
+           style="padding:12px;border:1px solid #3a3a3a;border-radius:6px;cursor:pointer;transition:background 0.1s;">
+        <div style="font-weight:600;font-size:14px;">${model.name}</div>
+        <div style="font-size:12px;color:#a0a0a0;margin-top:4px;">${model.description || ''}${acceptsLabel}</div>
+      </div>
+    `;
+  }
+  html += '</div>';
+  html += '<div id="ai-progress" style="display:none;margin-top:16px;">';
+  html += '  <div style="font-size:13px;margin-bottom:8px;" id="ai-status-text">Starting...</div>';
+  html += '  <div style="background:#3a3a3a;border-radius:4px;height:8px;overflow:hidden;">';
+  html += '    <div id="ai-progress-bar" style="background:#4a9eff;height:100%;width:0%;transition:width 0.3s;"></div>';
+  html += '  </div>';
+  html += '</div>';
+  html += '<button id="ai-cancel" style="margin-top:16px;padding:6px 16px;background:none;border:1px solid #a0a0a0;color:#a0a0a0;border-radius:4px;cursor:pointer;">Cancel</button>';
+
+  modal.innerHTML = html;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  const close = () => { if (overlay.parentNode) document.body.removeChild(overlay); };
+  modal.querySelector('#ai-cancel').addEventListener('click', close);
+
+  // Model selection
+  modal.querySelectorAll('.ai-model-option').forEach(opt => {
+    opt.addEventListener('mouseenter', () => { opt.style.background = '#363636'; });
+    opt.addEventListener('mouseleave', () => { opt.style.background = ''; });
+    opt.addEventListener('click', async () => {
+      const modelId = opt.getAttribute('data-model-id');
+      const model = models.find(m => m.id === modelId);
+
+      // Disable all options
+      modal.querySelectorAll('.ai-model-option').forEach(o => {
+        o.style.pointerEvents = 'none';
+        o.style.opacity = '0.5';
+      });
+      opt.style.opacity = '1';
+      opt.style.borderColor = '#4a9eff';
+
+      const progressDiv = modal.querySelector('#ai-progress');
+      const statusText = modal.querySelector('#ai-status-text');
+      const progressBar = modal.querySelector('#ai-progress-bar');
+      progressDiv.style.display = 'block';
+
+      try {
+        // If model accepts labels and we have seg data, upload it first
+        if (model.accepts_labels && state.segVolume) {
+          statusText.textContent = 'Uploading labels...';
+          await fetch(`/api/v1/ai/upload-seg/${metadata.id}`, {
+            method: 'POST',
+            body: state.segVolume,
+            headers: { 'Content-Type': 'application/octet-stream' },
+          });
+        }
+
+        // Submit job
+        statusText.textContent = 'Submitting job...';
+        const runResp = await fetch('/api/v1/ai/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ volume_id: metadata.id, model_id: modelId }),
+        });
+        const { job_id } = await runResp.json();
+
+        // Listen for progress via SSE
+        statusText.textContent = 'Running inference...';
+        const evtSource = new EventSource(`/api/v1/ai/jobs/${job_id}/status`);
+
+        await new Promise((resolve, reject) => {
+          evtSource.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            progressBar.style.width = `${data.progress}%`;
+            statusText.textContent = `Running... ${data.progress}%`;
+
+            if (data.status === 'completed') {
+              evtSource.close();
+              resolve();
+            } else if (data.status === 'failed') {
+              evtSource.close();
+              reject(new Error(data.error || 'Inference failed'));
+            }
+          };
+          evtSource.onerror = () => {
+            evtSource.close();
+            reject(new Error('Lost connection to server'));
+          };
+        });
+
+        // Fetch result
+        statusText.textContent = 'Loading result...';
+        const resultResp = await fetch(`/api/v1/ai/jobs/${job_id}/result`);
+        const maskBuffer = await resultResp.arrayBuffer();
+        const maskData = new Uint8Array(maskBuffer);
+
+        const labelsJson = resultResp.headers.get('X-AI-Labels');
+        const aiLabels = labelsJson ? JSON.parse(labelsJson) : [];
+
+        // Replace segmentation volume
+        if (!state.segVolume || state.segVolume.length !== maskData.length) {
+          const [dx, dy, dz] = state.dims;
+          state.segVolume = new Uint8Array(dx * dy * dz);
+          state.segDims = [...state.dims];
+        }
+        state.segVolume.set(maskData);
+
+        // Replace labels
+        state.labels.clear();
+        const { buildColorLUT } = await import('./viewer/overlayBlender.js');
+
+        for (const lb of aiLabels) {
+          let color = lb.color;
+          if (typeof color === 'string') {
+            const m = color.match(/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+            if (m) {
+              color = { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
+            } else {
+              color = { r: 200, g: 200, b: 200 };
+            }
+          }
+          state.labels.set(lb.value, {
+            name: lb.name || `Label ${lb.value}`,
+            value: lb.value,
+            color,
+            isVisible: true,
+          });
+        }
+
+        // If no labels from AI, auto-detect from mask
+        if (aiLabels.length === 0) {
+          const uniqueVals = new Set(maskData);
+          const DEFAULT_COLORS = [
+            null,
+            { r: 255, g: 0, b: 0 }, { r: 0, g: 255, b: 0 }, { r: 0, g: 0, b: 255 },
+            { r: 255, g: 255, b: 0 }, { r: 0, g: 255, b: 255 }, { r: 255, g: 0, b: 255 },
+          ];
+          for (const v of uniqueVals) {
+            if (v === 0) continue;
+            state.labels.set(v, {
+              name: `Label ${v}`,
+              value: v,
+              color: v < DEFAULT_COLORS.length ? DEFAULT_COLORS[v] : { r: 200, g: 200, b: 200 },
+              isVisible: true,
+            });
+          }
+        }
+
+        state.colorLUT = buildColorLUT(state.labels);
+        if (state.labels.size > 0) {
+          for (const [val] of state.labels) {
+            if (val !== 0) { state.activeLabel = val; break; }
+          }
+        }
+
+        state.notify();
+        close();
+
+      } catch (err) {
+        statusText.textContent = `Error: ${err.message}`;
+        statusText.style.color = '#ff6b6b';
+        progressBar.style.background = '#ff6b6b';
+      }
+    });
+  });
 }
 
 init();

@@ -25,6 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from server.api.volumes import router as volumes_router, register_volume
 from server.api.segmentations import router as segmentations_router
+from server.api.ai import router as ai_router, set_models_dir
 from server.catalog.models import VolumeMetadata, SegmentationMetadata
 
 app = FastAPI(title="NextEd Image Server")
@@ -39,11 +40,14 @@ app.add_middleware(
         "X-Voxel-Spacing",
         "X-Window-Center",
         "X-Window-Width",
+        "X-AI-Labels",
+        "X-AI-Report",
     ],
 )
 
 app.include_router(volumes_router)
 app.include_router(segmentations_router)
+app.include_router(ai_router)
 
 # Catalog of discovered volumes (populated at startup)
 _catalog: list[VolumeMetadata] = []
@@ -390,6 +394,12 @@ def main():
         cache_dir = cache_dir.parent
     cache_path = cache_dir / _CACHE_FILENAME
     _cache_path = cache_path
+
+    # Set up AI models directory
+    models_dir = Path(__file__).resolve().parent.parent / "models"
+    models_dir.mkdir(exist_ok=True)
+    set_models_dir(models_dir)
+    print(f"AI models config: {models_dir / 'ai-models.json'}")
 
     t0 = time.time()
     print("Scanning for volumes...")

@@ -68,7 +68,12 @@ export function refineContourAxial(volume, segVolume, dims, sliceZ, labelVal) {
 
   // 5. For each boundary pixel, compute outward normal and find best gradient shift
   const normals = computeOutwardNormals(boundary, mask, dimX, dimY);
-  const shifts = computeShifts(boundary, normals, gradMag, dimX, dimY, 2);
+
+  // 5a. Determine dominant gradient direction (sign of intensity change along
+  //     outward normal) so we only snap to edges with consistent polarity.
+  const dominantSign = computeDominantGradientSign(boundary, normals, smoothed, dimX, dimY);
+
+  const shifts = computeShifts(boundary, normals, gradMag, smoothed, dimX, dimY, 2, dominantSign);
 
   // 6. Smooth the shift values (average with neighbors along boundary)
   const smoothedShifts = smoothShifts(shifts, boundary, dimX, 3);
@@ -125,9 +130,46 @@ function computeOutwardNormals(boundary, mask, w, h) {
   return normals;
 }
 
+// ---------- Dominant gradient direction ----------
+
+/**
+ * For each boundary pixel, sample intensity just outside vs just inside along
+ * the outward normal. The sign of (outside - inside) tells us the polarity of
+ * the edge. We take a majority vote to get the dominant sign for the whole
+ * contour, so individual noise doesn't flip the decision.
+ *
+ * Returns +1 (brighter outside), -1 (darker outside), or 0 (no clear winner).
+ */
+function computeDominantGradientSign(boundary, normals, img, w, h) {
+  let pos = 0, neg = 0;
+  for (let i = 0; i < boundary.length; i++) {
+    const bx = boundary[i].x, by = boundary[i].y;
+    const nx = normals[i].x, ny = normals[i].y;
+
+    // Sample 1px outward and 1px inward along the normal
+    const ox = Math.round(bx + nx), oy = Math.round(by + ny);
+    const ix = Math.round(bx - nx), iy = Math.round(by - ny);
+
+    if (ox < 0 || ox >= w || oy < 0 || oy >= h) continue;
+    if (ix < 0 || ix >= w || iy < 0 || iy >= h) continue;
+
+    const diff = img[oy * w + ox] - img[iy * w + ix];
+    if (diff > 0) pos++;
+    else if (diff < 0) neg++;
+  }
+
+  if (pos > neg * 1.5) return 1;
+  if (neg > pos * 1.5) return -1;
+  return 0; // ambiguous — don't filter
+}
+
 // ---------- Compute gradient-snap shifts ----------
 
-function computeShifts(boundary, normals, gradMag, w, h, searchDist) {
+/**
+ * @param {number} dominantSign - +1, -1, or 0. When non-zero, only snap to
+ *   candidate positions whose local gradient polarity matches.
+ */
+function computeShifts(boundary, normals, gradMag, img, w, h, searchDist, dominantSign) {
   const shifts = new Float32Array(boundary.length);
   for (let i = 0; i < boundary.length; i++) {
     const bx = boundary[i].x, by = boundary[i].y;
@@ -145,6 +187,17 @@ function computeShifts(boundary, normals, gradMag, w, h, searchDist) {
       if (sx < 0 || sx >= w || sy < 0 || sy >= h) continue;
       const g = gradMag[sy * w + sx];
       if (g > bestGrad * 1.2 && g > bestGrad + 0.5) {
+        // Check gradient direction consistency if we have a dominant sign
+        if (dominantSign !== 0) {
+          // Sample intensity just outside vs just inside at this candidate
+          const osx = Math.round(sx + nx), osy = Math.round(sy + ny);
+          const isx = Math.round(sx - nx), isy = Math.round(sy - ny);
+          if (osx >= 0 && osx < w && osy >= 0 && osy < h &&
+              isx >= 0 && isx < w && isy >= 0 && isy < h) {
+            const localSign = Math.sign(img[osy * w + osx] - img[isy * w + isx]);
+            if (localSign !== 0 && localSign !== dominantSign) continue;
+          }
+        }
         bestGrad = g;
         bestD = d;
       }
