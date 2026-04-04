@@ -56,7 +56,10 @@ Plans:
   2. User deletes a volume's files from the watched folder and sees it disappear from the volume list within seconds without page reload
   3. User copies a multi-file DICOM series into a watched folder and sees it appear as a single volume entry (not one entry per file) after a short debounce period
   4. User navigates away and returns (or loses network briefly) and the WebSocket reconnects automatically, resuming event delivery
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 06-01-PLAN.md — Server-side watcher (watchdog observer, DICOM debouncer, WebSocket ConnectionManager, lifespan integration, hash-based volume IDs)
+- [ ] 06-02-PLAN.md — Client-side WebSocket client with reconnect, reactive volume list updates, connection status indicator
 
 ### Phase 7: Format-Aware Segmentation Storage
 **Goal**: Users save segmentations and the correct format is chosen automatically -- DICOM-SEG for DICOM-sourced volumes, NIfTI for NIfTI-sourced volumes
@@ -90,6 +93,6 @@ Phases execute in numeric order: 5 -> 6 -> 7 -> 8
 | 3. Segmentation Display & Labels | v1.0 | -/- | Complete | - |
 | 4. Editing Tools & Save | v1.0 | -/- | Complete | - |
 | 5. Foundation | v2.0 | 0/2 | Not started | - |
-| 6. Folder Monitoring & WebSocket Events | v2.0 | 0/TBD | Not started | - |
+| 6. Folder Monitoring & WebSocket Events | v2.0 | 0/2 | Not started | - |
 | 7. Format-Aware Segmentation Storage | v2.0 | 0/TBD | Not started | - |
 | 8. DICOMweb WADO-RS | v2.0 | 0/TBD | Not started | - |
