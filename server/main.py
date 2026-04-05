@@ -11,6 +11,7 @@ import hashlib
 import json
 import sys
 import time
+from contextlib import asynccontextmanager
 from pathlib import Path
 import re
 
@@ -27,9 +28,35 @@ from server.api.volumes import router as volumes_router, register_volume
 from server.api.segmentations import router as segmentations_router
 from server.api.ai import router as ai_router, set_models_dir
 from server.api.task import router as task_router
+from server.api.ws import ws_router
 from server.catalog.models import VolumeMetadata, SegmentationMetadata
 
-app = FastAPI(title="NextEd Image Server")
+
+@asynccontextmanager
+async def lifespan(app_instance: FastAPI):
+    """Start/stop the filesystem watcher alongside the server."""
+    from server.watcher.observer import start_watcher
+
+    paths_to_watch = getattr(app_instance.state, '_watch_paths', [])
+    observer = None
+    consumer_task = None
+    debouncer = None
+    if paths_to_watch:
+        observer, consumer_task, debouncer = await start_watcher(paths_to_watch)
+        print(f"Watcher started on {len(paths_to_watch)} path(s)")
+    yield
+    # Shutdown: stop observer, cancel consumer
+    if observer:
+        observer.stop()
+        observer.join(timeout=5)
+    if consumer_task:
+        consumer_task.cancel()
+    if debouncer:
+        debouncer.cancel_all()
+    print("Watcher stopped")
+
+
+app = FastAPI(title="NextEd Image Server", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -50,6 +77,7 @@ app.include_router(volumes_router)
 app.include_router(segmentations_router)
 app.include_router(ai_router)
 app.include_router(task_router)
+app.include_router(ws_router)
 
 from server.api.config import router as config_router
 app.include_router(config_router)
@@ -447,6 +475,16 @@ def main():
             print(f"Registered {len(_catalog)} volume(s) in {time.time() - t1:.1f}s")
 
             _save_cache(cache_path, cache_key, _catalog, _segmentation_catalog, path_reg)
+
+    # Resolve watched paths for the watcher (lifespan reads from app.state)
+    watch_paths = []
+    for p in paths:
+        resolved = Path(p).expanduser().resolve()
+        if resolved.is_file():
+            watch_paths.append(str(resolved.parent))
+        elif resolved.is_dir():
+            watch_paths.append(str(resolved))
+    app.state._watch_paths = watch_paths
 
     print(f"\n{len(_catalog)} volume(s) ready. Starting server on http://localhost:8050")
     print("Volume data will be loaded on demand when opened in the viewer.")
