@@ -31,6 +31,13 @@ def register_volume(vol_id: str, meta: VolumeMetadata, path: str, fmt: str):
     _path_registry[vol_id] = (path, fmt)
 
 
+def unregister_volume(vol_id: str):
+    """Remove a volume from all registries."""
+    _metadata_registry.pop(vol_id, None)
+    _path_registry.pop(vol_id, None)
+    _volume_cache.pop(vol_id, None)
+
+
 def _ensure_loaded(volume_id: str):
     """Load volume pixel data into cache if not already present."""
     if volume_id in _volume_cache:
