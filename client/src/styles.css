@@ -47,6 +47,7 @@ body {
   border-right: 1px solid #3a3a3a;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .sidebar-heading {
@@ -683,4 +684,30 @@ input[type="number"] {
 .task-submit-btn.submitting {
   opacity: 0.6;
   pointer-events: none;
+}
+
+/* -- Connection status indicator -- */
+
+.connection-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  transition: background-color 0.3s;
+}
+
+.connection-status.connected {
+  background-color: #4caf50;
+}
+
+.connection-status.reconnecting {
+  background-color: #ff9800;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }

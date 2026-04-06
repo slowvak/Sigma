@@ -1,7 +1,9 @@
 import './styles.css';
 import { createAppShell } from './ui/appShell.js';
-import { renderVolumeList } from './ui/volumeList.js';
+import { renderVolumeList, addVolumeToList, removeVolumeFromList } from './ui/volumeList.js';
 import { renderVolumeDetail, renderEmptyState } from './ui/volumeDetail.js';
+import { initWebSocket, onWsEvent, onStatusChange } from './wsClient.js';
+import { createConnectionStatus, updateConnectionStatus } from './ui/connectionStatus.js';
 import { fetchVolumes, fetchVolumeMetadata, fetchVolumeData } from './api.js';
 import { ViewerState } from './viewer/ViewerState.js';
 import { FourPanelLayout } from './viewer/FourPanelLayout.js';
@@ -31,29 +33,56 @@ async function init() {
 
   renderEmptyState(detailPanel);
 
+  const selectHandler = (vol) => {
+    currentVolume = vol;
+    // Clear previous selections
+    listContainer.querySelectorAll('.volume-item').forEach(item => {
+      item.classList.remove('selected');
+      item.setAttribute('aria-selected', 'false');
+    });
+    // Mark current as selected
+    const selectedItem = listContainer.querySelector(`[data-volume-id="${vol.id}"]`);
+    if (selectedItem) {
+      selectedItem.classList.add('selected');
+      selectedItem.setAttribute('aria-selected', 'true');
+    }
+    renderVolumeDetail(vol, detailPanel, (volume) => openVolume(volume, { detailPanel, sidebar, toolPanel }));
+  };
+
   try {
     const volumes = await fetchVolumes();
-    renderVolumeList(volumes, listContainer, (vol) => {
-      currentVolume = vol;
-      // Clear previous selections
-      listContainer.querySelectorAll('.volume-item').forEach(item => {
-        item.classList.remove('selected');
-        item.setAttribute('aria-selected', 'false');
-      });
-      // Mark current as selected
-      const selectedItem = listContainer.querySelector(`[data-volume-id="${vol.id}"]`);
-      if (selectedItem) {
-        selectedItem.classList.add('selected');
-        selectedItem.setAttribute('aria-selected', 'true');
-      }
-      renderVolumeDetail(vol, detailPanel, (volume) => openVolume(volume, { detailPanel, sidebar, toolPanel }));
-    });
+    renderVolumeList(volumes, listContainer, selectHandler);
   } catch (err) {
     const banner = document.createElement('div');
     banner.className = 'error-banner';
     banner.textContent = `Failed to load volumes: ${err.message}`;
     detailPanel.appendChild(banner);
   }
+
+  // WebSocket: real-time volume list updates
+  onWsEvent((msg) => {
+    if (msg.type === 'volume_added') {
+      addVolumeToList(msg.data, listContainer, selectHandler);
+    } else if (msg.type === 'volume_removed') {
+      removeVolumeFromList(msg.data.id, listContainer);
+      // If the removed volume is currently open, close the viewer
+      if (currentVolume && currentVolume.id === msg.data.id) {
+        currentVolume = null;
+        if (currentLayout) {
+          currentLayout.destroy();
+          currentLayout = null;
+        }
+        renderEmptyState(detailPanel);
+      }
+    }
+  });
+
+  // Connection status indicator
+  createConnectionStatus(sidebar);
+  onStatusChange(updateConnectionStatus);
+
+  // Start WebSocket connection
+  initWebSocket();
 }
 
 async function initTaskMode(taskParams) {
