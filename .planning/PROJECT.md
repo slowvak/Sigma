@@ -106,4 +106,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-06 after Phase 06 complete — folder monitoring and WebSocket events operational*
+*Last updated: 2026-04-06 after Phase 07 complete — format-aware segmentation storage: DICOM volumes save as DICOM-SEG, NIfTI unchanged, watcher suppress list prevents re-detection*
