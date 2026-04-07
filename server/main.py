@@ -37,20 +37,47 @@ from server.watcher.suppress import WatcherSuppressList
 suppress_list = WatcherSuppressList(ttl=5.0)
 
 
-@asynccontextmanager
-async def lifespan(app_instance: FastAPI):
-    """Start/stop the filesystem watcher alongside the server."""
-    from server.watcher.observer import start_watcher
+async def _background_scan_and_watch(app_instance: FastAPI):
+    """Run initial scan in a thread, then start the filesystem watcher."""
+    import asyncio
+
+    scan_paths = getattr(app_instance.state, '_scan_paths', [])
+    if scan_paths:
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, _perform_scan, scan_paths)
+        print(f"\n{len(_catalog)} volume(s) ready.")
 
     paths_to_watch = getattr(app_instance.state, '_watch_paths', [])
-    observer = None
-    consumer_task = None
-    debouncer = None
     if paths_to_watch:
-        observer, consumer_task, debouncer = await start_watcher(paths_to_watch)
-        print(f"Watcher started on {len(paths_to_watch)} path(s)")
+        try:
+            from server.watcher.observer import start_watcher
+            observer, consumer_task, debouncer = await start_watcher(paths_to_watch)
+            app_instance.state._watcher_observer = observer
+            app_instance.state._watcher_consumer = consumer_task
+            app_instance.state._watcher_debouncer = debouncer
+            print(f"Watcher started on {len(paths_to_watch)} path(s)")
+        except ImportError:
+            print("Warning: watchdog not installed — filesystem watching disabled. "
+                  "Run `uv add watchdog` to enable live volume detection.")
+        except Exception as exc:
+            print(f"Warning: watcher failed to start: {exc}")
+
+
+@asynccontextmanager
+async def lifespan(app_instance: FastAPI):
+    """Start server immediately, scan and watch in background."""
+    import asyncio
+
+    # Fire-and-forget: scan + watcher start in background so server accepts requests now
+    scan_task = asyncio.create_task(_background_scan_and_watch(app_instance))
+
     yield
-    # Shutdown: stop observer, cancel consumer
+
+    # Shutdown: cancel background scan if still running, stop watcher
+    scan_task.cancel()
+    observer = getattr(app_instance.state, '_watcher_observer', None)
+    consumer_task = getattr(app_instance.state, '_watcher_consumer', None)
+    debouncer = getattr(app_instance.state, '_watcher_debouncer', None)
     if observer:
         observer.stop()
         observer.join(timeout=5)
@@ -142,6 +169,32 @@ async def list_volumes():
     return _catalog
 
 
+@app.post("/api/v1/volumes/rescan")
+async def trigger_rescan():
+    """Dynamically rescan the source directory without restarting."""
+    import asyncio
+    from server.api.config import get_config_data
+    config = get_config_data()
+    paths = []
+    if config.get("source_directory"):
+        paths = [config["source_directory"]]
+
+    loop = asyncio.get_event_loop()
+    count = await loop.run_in_executor(None, _perform_scan, paths)
+
+    # Update watcher paths for new directory
+    watch_paths = []
+    for p in paths:
+        resolved = Path(p).expanduser().resolve()
+        if resolved.is_file():
+            watch_paths.append(str(resolved.parent))
+        elif resolved.is_dir():
+            watch_paths.append(str(resolved))
+    app.state._watch_paths = watch_paths
+
+    return {"status": "success", "volumes_found": count}
+
+
 def _read_cache() -> dict:
     """Read the full cache file."""
     if _cache_path and _cache_path.exists():
@@ -204,7 +257,7 @@ async def debug_volume_paths(volume_id: str):
 #                     format = "dicom_series"
 
 def _discover_nifti_volumes(root: Path) -> list[dict]:
-    """Find NIfTI volumes under root, read headers for metadata."""
+    """Find NIfTI volumes under root, read headers for metadata only (fast)."""
     import nibabel as nib
     entries = []
     nifti_files = sorted(root.rglob("*.nii")) + sorted(root.rglob("*.nii.gz"))
@@ -213,12 +266,12 @@ def _discover_nifti_volumes(root: Path) -> list[dict]:
         if _SEG_PATTERN.search(nii.name):
             continue
         try:
+            # Read header only without loading data into memory
             img = nib.load(str(nii))
-            canonical = nib.as_closest_canonical(img)
-            dims = [int(d) for d in canonical.shape[:3]]
+            dims = [int(d) for d in img.shape[:3]]
             if any(d < _MIN_DIM for d in dims):
                 continue
-            spacing = [float(s) for s in canonical.header.get_zooms()[:3]]
+            spacing = [float(s) for s in img.header.get_zooms()[:3]]
             entries.append({
                 "name": nii.stem.replace(".nii", ""),
                 "path": str(nii),
@@ -345,7 +398,7 @@ def _register_entries(entries: list[dict]) -> tuple[
     path_registry = []
 
     for i, entry in enumerate(entries):
-        vol_id = str(i)
+        vol_id = hashlib.md5(entry["path"].encode()).hexdigest()[:12]
         try:
             meta = VolumeMetadata(
                 id=vol_id,
@@ -418,6 +471,60 @@ def _load_from_cache(cached_volumes: list[dict]):
     return catalog, seg_catalog, path_registry
 
 
+def _perform_scan(paths: list[str]) -> int:
+    """Helper to perform the actual scan and update the registries."""
+    global _cache_path
+    
+    # Determine cache location
+    if paths:
+        cache_dir = Path(paths[0]).expanduser().resolve()
+        if cache_dir.is_file():
+            cache_dir = cache_dir.parent
+        cache_path = cache_dir / _CACHE_FILENAME
+    else:
+        cache_path = Path(_CACHE_FILENAME)
+    _cache_path = cache_path
+
+    t0 = time.time()
+    print("Scanning for volumes...")
+    entries = _discover_all(paths)
+
+    _catalog.clear()
+    _segmentation_catalog.clear()
+    
+    if not entries:
+        print("No volumes found in provided paths")
+        return 0
+
+    print(f"Discovered {len(entries)} volume(s) in {time.time() - t0:.1f}s")
+    cache_key = _compute_cache_key(entries)
+    cached = _load_cache(cache_path, cache_key)
+
+    if cached is not None:
+        print(f"Loading {len(cached)} volume(s) from cache...")
+        t1 = time.time()
+        cat, seg_cat, _ = _load_from_cache(cached)
+        _catalog.extend(cat)
+        _segmentation_catalog.update(seg_cat)
+        print(f"Loaded {len(_catalog)} volume(s) from cache in {time.time() - t1:.2f}s")
+    else:
+        print("Registering volumes...")
+        t1 = time.time()
+        
+        # We need to clear the _path_registry in the volumes module if we are doing a fresh re-register
+        from server.api.volumes import _path_registry, _metadata_registry
+        _path_registry.clear()
+        _metadata_registry.clear()
+            
+        cat, seg_cat, path_reg = _register_entries(entries)
+        _catalog.extend(cat)
+        _segmentation_catalog.update(seg_cat)
+        print(f"Registered {len(_catalog)} volume(s) in {time.time() - t1:.1f}s")
+        _save_cache(cache_path, cache_key, _catalog, _segmentation_catalog, path_reg)
+        
+    return len(_catalog)
+
+
 def main():
     from server.api.config import get_config_data
     config = get_config_data()
@@ -430,57 +537,11 @@ def main():
         print("Warning: No paths provided via CLI and no source_directory configured.")
         print("Server will start empty. You can set the source directory in Preferences.")
 
-
-    # Determine cache location
-    global _cache_path
-    if paths:
-        cache_dir = Path(paths[0]).expanduser().resolve()
-        if cache_dir.is_file():
-            cache_dir = cache_dir.parent
-        cache_path = cache_dir / _CACHE_FILENAME
-    else:
-        cache_path = Path(_CACHE_FILENAME) # local dir fallback
-    _cache_path = cache_path
-
     # Set up AI models directory
     models_dir = Path(__file__).resolve().parent.parent / "models"
     models_dir.mkdir(exist_ok=True)
     set_models_dir(models_dir)
-    # The ai models are now managed via the unified config API.
-    # We leave set_models_dir purely for any directory artifacts if needed,
-    # but the config will drive the inference server logic.
     print("AI config expects unified config.json")
-
-    t0 = time.time()
-    print("Scanning for volumes...")
-    entries = _discover_all(paths)
-
-    if not entries:
-        print("No volumes found in provided paths")
-    else:
-        print(f"Discovered {len(entries)} volume(s) in {time.time() - t0:.1f}s")
-
-        cache_key = _compute_cache_key(entries)
-        cached = _load_cache(cache_path, cache_key)
-
-        if cached is not None:
-            print(f"Loading {len(cached)} volume(s) from cache...")
-            t1 = time.time()
-            cat, seg_cat, _ = _load_from_cache(cached)
-            _catalog.clear()
-            _catalog.extend(cat)
-            _segmentation_catalog.update(seg_cat)
-            print(f"Loaded {len(_catalog)} volume(s) from cache in {time.time() - t1:.2f}s")
-        else:
-            print("Registering volumes...")
-            t1 = time.time()
-            cat, seg_cat, path_reg = _register_entries(entries)
-            _catalog.clear()
-            _catalog.extend(cat)
-            _segmentation_catalog.update(seg_cat)
-            print(f"Registered {len(_catalog)} volume(s) in {time.time() - t1:.1f}s")
-
-            _save_cache(cache_path, cache_key, _catalog, _segmentation_catalog, path_reg)
 
     # Resolve watched paths for the watcher (lifespan reads from app.state)
     watch_paths = []
@@ -491,8 +552,10 @@ def main():
         elif resolved.is_dir():
             watch_paths.append(str(resolved))
     app.state._watch_paths = watch_paths
+    # Scan runs in lifespan (background thread) so server starts accepting requests immediately
+    app.state._scan_paths = paths
 
-    print(f"\n{len(_catalog)} volume(s) ready. Starting server on http://localhost:8050")
+    print(f"\nStarting server on http://localhost:8050")
     print("Volume data will be loaded on demand when opened in the viewer.")
     uvicorn.run(app, host="0.0.0.0", port=8050)
 

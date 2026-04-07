@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request
 import json
+import asyncio
 from pathlib import Path
 from pydantic import BaseModel
 from typing import Dict, List, Any
@@ -82,3 +83,75 @@ async def update_config(request: Request):
     new_config = await request.json()
     set_config_data(new_config)
     return {"status": "success"}
+
+
+def _open_native_folder_dialog() -> str:
+    """Open a native OS folder picker dialog (blocking). Returns POSIX path or ''.
+
+    Strategy (macOS):
+      osascript — single call that returns a POSIX path directly.
+    Fallback:
+      tkinter — for Linux / Windows or if osascript is unavailable.
+    """
+    import sys
+    import subprocess
+    import os
+
+    # ── macOS: osascript (primary) ────────────────────────────────────────────
+    if sys.platform == "darwin":
+        try:
+            # Bring the dialog to front even when launched from a background process
+            script = (
+                'tell application "System Events"\n'
+                '  activate\n'
+                'end tell\n'
+                'POSIX path of (choose folder with prompt "Select Image Folder")'
+            )
+            # Ensure DISPLAY-like env for GUI dialogs from background processes
+            env = os.environ.copy()
+            result = subprocess.run(
+                ["osascript", "-e", script],
+                capture_output=True, text=True, timeout=120, env=env
+            )
+            if result.returncode == 0:
+                path = result.stdout.strip().rstrip("/")
+                if path:
+                    print(f"[browse-folder] osascript selected: {path}")
+                    return path
+            else:
+                err = result.stderr.strip()
+                if "User canceled" not in err and "(-128)" not in err:
+                    print(f"[browse-folder] osascript error: {err}")
+        except Exception as exc:
+            print(f"[browse-folder] osascript failed: {exc}")
+
+    # ── tkinter (fallback / non-macOS) ───────────────────────────────────────
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk()
+        root.withdraw()
+        root.lift()
+        root.attributes("-topmost", True)
+        folder = filedialog.askdirectory(title="Select Image Folder")
+        root.destroy()
+        if folder:
+            print(f"[browse-folder] tkinter selected: {folder}")
+        return folder or ""
+    except Exception as exc:
+        print(f"[browse-folder] tkinter failed: {exc}")
+
+    return ""
+
+
+@router.post("/browse-folder")
+async def browse_folder():
+    """Open a native OS folder picker and return the selected path.
+
+    Runs the blocking dialog in a thread-pool executor so the async event loop
+    stays responsive while the user interacts with the dialog.
+    """
+    loop = asyncio.get_event_loop()
+    folder = await loop.run_in_executor(None, _open_native_folder_dialog)
+    return {"path": folder}
+
