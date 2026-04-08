@@ -100,14 +100,12 @@ def _open_native_folder_dialog() -> str:
     # ── macOS: osascript (primary) ────────────────────────────────────────────
     if sys.platform == "darwin":
         try:
-            # Bring the dialog to front even when launched from a background process
+            # activate SystemUIServer to bring the dialog to front without
+            # requiring Automation permission for System Events / Finder
             script = (
-                'tell application "System Events"\n'
-                '  activate\n'
-                'end tell\n'
+                'tell application "SystemUIServer" to activate\n'
                 'POSIX path of (choose folder with prompt "Select Image Folder")'
             )
-            # Ensure DISPLAY-like env for GUI dialogs from background processes
             env = os.environ.copy()
             result = subprocess.run(
                 ["osascript", "-e", script],
@@ -122,6 +120,17 @@ def _open_native_folder_dialog() -> str:
                 err = result.stderr.strip()
                 if "User canceled" not in err and "(-128)" not in err:
                     print(f"[browse-folder] osascript error: {err}")
+                    # Retry without the activate line (some sandboxed envs block it)
+                    result2 = subprocess.run(
+                        ["osascript", "-e",
+                         'POSIX path of (choose folder with prompt "Select Image Folder")'],
+                        capture_output=True, text=True, timeout=120, env=env
+                    )
+                    if result2.returncode == 0:
+                        path = result2.stdout.strip().rstrip("/")
+                        if path:
+                            print(f"[browse-folder] osascript (bare) selected: {path}")
+                            return path
         except Exception as exc:
             print(f"[browse-folder] osascript failed: {exc}")
 
