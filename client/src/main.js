@@ -1010,17 +1010,31 @@ async function _runTotalSegmentator(state, metadata) {
   );
   if (!confirmed) return;
 
-  // Trigger NIfTI download via anchor (browser streams directly, no blob memory overhead)
-  const url = `/api/v1/volumes/${metadata.id}/nifti`;
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = '';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  // Open TotalSegmentator first (needs user-gesture context; fetch below is async)
+  const tsWin = window.open('https://totalsegmentator.com', '_blank', 'noopener,noreferrer');
+  if (!tsWin) alert('Popup blocked — please allow popups for this site.');
 
-  // Open TotalSegmentator in new tab
-  window.open('https://totalsegmentator.com', '_blank', 'noopener,noreferrer');
+  // Fetch bytes then create a Blob URL so the download attribute works reliably
+  try {
+    const resp = await fetch(`/api/v1/volumes/${metadata.id}/nifti`);
+    if (!resp.ok) throw new Error(`Server returned ${resp.status}`);
+
+    const cd = resp.headers.get('Content-Disposition') || '';
+    const match = cd.match(/filename="([^"]+)"/);
+    const filename = match ? match[1] : `${metadata.name || 'volume'}.nii`;
+
+    const blob = await resp.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+  } catch (err) {
+    alert('Failed to download NIfTI: ' + err.message);
+  }
 }
 
 async function _showAIModelPicker(state, metadata) {
