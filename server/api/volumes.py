@@ -91,6 +91,54 @@ async def get_volume_metadata(volume_id: str) -> VolumeMetadata:
     return _metadata_registry[volume_id]
 
 
+@router.get("/{volume_id}/nifti")
+async def get_volume_as_nifti(volume_id: str) -> Response:
+    """Return volume as NIfTI file bytes for download.
+
+    For NIfTI source volumes, returns the raw file bytes directly.
+    For DICOM source volumes, converts to NIfTI using nibabel and returns the bytes.
+    """
+    if volume_id not in _metadata_registry:
+        raise HTTPException(status_code=404, detail=f"Volume {volume_id} not found")
+
+    _ensure_loaded(volume_id)
+
+    data, _loader_metadata = _volume_cache[volume_id]
+    path, fmt = _path_registry[volume_id]
+
+    if fmt == "nifti":
+        file_bytes = Path(path).read_bytes()
+        filename = Path(path).name
+    else:
+        import io
+        import os
+        import tempfile
+
+        import nibabel as nib
+        import numpy as np
+
+        meta = _metadata_registry[volume_id]
+        affine = np.diag([*meta.voxel_spacing, 1.0])
+        img = nib.Nifti1Image(data.astype(np.float32), affine)
+
+        with tempfile.NamedTemporaryFile(suffix=".nii", delete=False) as tmp:
+            tmp_path = tmp.name
+        try:
+            nib.save(img, tmp_path)
+            with open(tmp_path, "rb") as f:
+                file_bytes = f.read()
+        finally:
+            os.unlink(tmp_path)
+
+        filename = f"{meta.name}.nii"
+
+    return Response(
+        content=file_bytes,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @router.get("/{volume_id}/data")
 async def get_volume_data(volume_id: str) -> Response:
     """Return volume binary data as C-contiguous float32 bytes.
