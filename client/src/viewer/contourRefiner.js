@@ -105,6 +105,118 @@ export function refineContourAxial(volume, segVolume, dims, sliceZ, labelVal) {
   return diff.indices.length > 0 ? diff : null;
 }
 
+/**
+ * Fill holes in each 2D connected component of the given label on the axial slice.
+ *
+ * For each connected component: flood-fills from the bounding-box border to find
+ * exterior background, then marks any enclosed background pixel as a hole and fills
+ * it with labelVal.
+ *
+ * @param {Uint8Array} segVolume
+ * @param {number[]}   dims     - [dimX, dimY, dimZ]
+ * @param {number}     sliceZ
+ * @param {number}     labelVal
+ * @returns {{ indices: number[], oldValues: number[] } | null}
+ */
+export function fillHolesOnSlice(segVolume, dims, sliceZ, labelVal) {
+  const [dimX, dimY] = dims;
+  const sliceSize = dimX * dimY;
+  const base = sliceZ * sliceSize;
+
+  // Build label mask and find connected components (4-connectivity BFS)
+  const labelMask = new Uint8Array(sliceSize);
+  for (let i = 0; i < sliceSize; i++) {
+    if (segVolume[base + i] === labelVal) labelMask[i] = 1;
+  }
+
+  const compId = new Int32Array(sliceSize).fill(-1);
+  const compPixels = [];
+
+  for (let start = 0; start < sliceSize; start++) {
+    if (labelMask[start] === 0 || compId[start] >= 0) continue;
+    const c = compPixels.length;
+    compPixels.push([]);
+    const queue = [start];
+    compId[start] = c;
+    let head = 0;
+    while (head < queue.length) {
+      const idx = queue[head++];
+      compPixels[c].push(idx);
+      const x = idx % dimX, y = (idx / dimX) | 0;
+      if (x > 0        && labelMask[idx - 1]    && compId[idx - 1]    < 0) { compId[idx - 1]    = c; queue.push(idx - 1);    }
+      if (x < dimX - 1 && labelMask[idx + 1]    && compId[idx + 1]    < 0) { compId[idx + 1]    = c; queue.push(idx + 1);    }
+      if (y > 0        && labelMask[idx - dimX]  && compId[idx - dimX] < 0) { compId[idx - dimX] = c; queue.push(idx - dimX); }
+      if (y < dimY - 1 && labelMask[idx + dimX]  && compId[idx + dimX] < 0) { compId[idx + dimX] = c; queue.push(idx + dimX); }
+    }
+  }
+
+  if (compPixels.length === 0) return null;
+
+  const diff = { indices: [], oldValues: [] };
+
+  for (let c = 0; c < compPixels.length; c++) {
+    // Bounding box
+    let minX = dimX, maxX = 0, minY = dimY, maxY = 0;
+    for (const idx of compPixels[c]) {
+      const x = idx % dimX, y = (idx / dimX) | 0;
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (y < minY) minY = y; if (y > maxY) maxY = y;
+    }
+    // Expand by 1, clamped
+    const x0 = Math.max(0, minX - 1), x1 = Math.min(dimX - 1, maxX + 1);
+    const y0 = Math.max(0, minY - 1), y1 = Math.min(dimY - 1, maxY + 1);
+    const bw = x1 - x0 + 1, bh = y1 - y0 + 1, bSize = bw * bh;
+
+    // Local mask: 1 = this component, 0 = other
+    const local = new Uint8Array(bSize);
+    for (let by = 0; by < bh; by++) {
+      for (let bx = 0; bx < bw; bx++) {
+        const gIdx = (y0 + by) * dimX + (x0 + bx);
+        local[by * bw + bx] = (compId[gIdx] === c) ? 1 : 0;
+      }
+    }
+
+    // Flood-fill exterior background from bbox border
+    const visited = new Uint8Array(bSize);
+    const fq = [];
+    for (let bx = 0; bx < bw; bx++) {
+      const t = bx, b = (bh - 1) * bw + bx;
+      if (!local[t] && !visited[t]) { visited[t] = 1; fq.push(t); }
+      if (!local[b] && !visited[b]) { visited[b] = 1; fq.push(b); }
+    }
+    for (let by = 1; by < bh - 1; by++) {
+      const l = by * bw, r = by * bw + bw - 1;
+      if (!local[l] && !visited[l]) { visited[l] = 1; fq.push(l); }
+      if (!local[r] && !visited[r]) { visited[r] = 1; fq.push(r); }
+    }
+    let head = 0;
+    while (head < fq.length) {
+      const bi = fq[head++];
+      const bx = bi % bw, by = (bi / bw) | 0;
+      if (bx > 0       && !local[bi - 1]  && !visited[bi - 1])  { visited[bi - 1]  = 1; fq.push(bi - 1);  }
+      if (bx < bw - 1  && !local[bi + 1]  && !visited[bi + 1])  { visited[bi + 1]  = 1; fq.push(bi + 1);  }
+      if (by > 0       && !local[bi - bw] && !visited[bi - bw]) { visited[bi - bw] = 1; fq.push(bi - bw); }
+      if (by < bh - 1  && !local[bi + bw] && !visited[bi + bw]) { visited[bi + bw] = 1; fq.push(bi + bw); }
+    }
+
+    // Unvisited background pixels are holes — fill them
+    for (let bi = 0; bi < bSize; bi++) {
+      if (local[bi] === 0 && !visited[bi]) {
+        const gx = x0 + (bi % bw), gy = y0 + ((bi / bw) | 0);
+        const volIdx = base + gy * dimX + gx;
+        const oldVal = segVolume[volIdx];
+        if (oldVal !== labelVal) {
+          diff.indices.push(volIdx);
+          diff.oldValues.push(oldVal);
+          segVolume[volIdx] = labelVal;
+        }
+      }
+    }
+  }
+
+  return diff.indices.length > 0 ? diff : null;
+}
+
 // ---------- Outward normals for boundary pixels ----------
 
 function computeOutwardNormals(boundary, mask, w, h) {

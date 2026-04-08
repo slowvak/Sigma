@@ -8,7 +8,7 @@ import { fetchVolumes, fetchVolumeMetadata, fetchVolumeData } from './api.js';
 import { ViewerState } from './viewer/ViewerState.js';
 import { FourPanelLayout } from './viewer/FourPanelLayout.js';
 import { createPresetBar } from './ui/presetBar.js';
-import { refineContourAxial } from './viewer/contourRefiner.js';
+import { refineContourAxial, fillHolesOnSlice } from './viewer/contourRefiner.js';
 import { loadAppConfig, appConfig } from './configStore.js';
 import { openPreferencesModal } from './ui/preferencesModal.js';
 import { showFolderPickerModal } from './ui/folderPickerModal.js';
@@ -687,9 +687,29 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
     state.notify();
   });
 
+  const fillHolesBtn = document.createElement('button');
+  fillHolesBtn.className = 'compact-btn action-btn';
+  fillHolesBtn.title = 'Fill holes in each connected component of the active label on this slice';
+  fillHolesBtn.textContent = '⬡ Fill Holes';
+
+  fillHolesBtn.addEventListener('click', () => {
+    if (!state.segVolume || state.activeLabel === 0) {
+      alert('No active label selected.');
+      return;
+    }
+    const diff = fillHolesOnSlice(state.segVolume, state.dims, state.cursor[2], state.activeLabel);
+    if (!diff) {
+      alert('No holes found on this slice.');
+      return;
+    }
+    state.pushUndo(diff);
+    state.notify();
+  });
+
   actionRow.appendChild(undoBtn);
   actionRow.appendChild(refineBtn);
   actionRow.appendChild(propagateBtn);
+  actionRow.appendChild(fillHolesBtn);
   toolPanel.appendChild(actionRow);
 
   // AI button
