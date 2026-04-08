@@ -106,22 +106,28 @@ async def get_volume_as_nifti(volume_id: str) -> Response:
     data, _loader_metadata = _volume_cache[volume_id]
     path, fmt = _path_registry[volume_id]
 
+    import gzip
+    import os
+    import tempfile
+
+    import nibabel as nib
+    import numpy as np
+
     if fmt == "nifti":
-        file_bytes = Path(path).read_bytes()
-        filename = Path(path).name
+        src = Path(path)
+        if src.suffix == ".gz":
+            file_bytes = src.read_bytes()
+            filename = src.name
+        else:
+            # Compress .nii → .nii.gz on the fly
+            file_bytes = gzip.compress(src.read_bytes())
+            filename = src.name + ".gz"
     else:
-        import io
-        import os
-        import tempfile
-
-        import nibabel as nib
-        import numpy as np
-
         meta = _metadata_registry[volume_id]
         affine = np.diag([*meta.voxel_spacing, 1.0])
         img = nib.Nifti1Image(data.astype(np.float32), affine)
 
-        with tempfile.NamedTemporaryFile(suffix=".nii", delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=".nii.gz", delete=False) as tmp:
             tmp_path = tmp.name
         try:
             nib.save(img, tmp_path)
@@ -130,7 +136,7 @@ async def get_volume_as_nifti(volume_id: str) -> Response:
         finally:
             os.unlink(tmp_path)
 
-        filename = f"{meta.name}.nii"
+        filename = f"{meta.name}.nii.gz"
 
     return Response(
         content=file_bytes,
