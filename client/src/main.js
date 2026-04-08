@@ -701,6 +701,15 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
   aiBtn.addEventListener('click', () => _showAIModelPicker(state, metadata));
   toolPanel.appendChild(aiBtn);
 
+  // TotalSegmentator button
+  const tsBtn = document.createElement('button');
+  tsBtn.className = 'compact-btn';
+  tsBtn.textContent = 'TotalSegmentator';
+  tsBtn.title = 'Download volume as NIfTI and open TotalSegmentator';
+  tsBtn.style.cssText = 'width:100%;margin-top:4px;padding:4px 8px;font-size:12px;';
+  tsBtn.addEventListener('click', () => _runTotalSegmentator(state, metadata));
+  toolPanel.appendChild(tsBtn);
+
   // Settings section
   const settingsSec = document.createElement('div');
   settingsSec.className = 'tool-section compact';
@@ -988,6 +997,30 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
   renderLabels();
   // Subscribe to state to update labels if they change
   state.subscribe(renderLabels);
+}
+
+async function _runTotalSegmentator(state, metadata) {
+  if (!metadata || !metadata.id) {
+    alert('No volume loaded.');
+    return;
+  }
+  const confirmed = window.confirm(
+    'This will download the volume as NIfTI and open TotalSegmentator.\n\n' +
+    'Upload the downloaded file at totalsegmentator.com to run segmentation.'
+  );
+  if (!confirmed) return;
+
+  // Trigger NIfTI download via anchor (browser streams directly, no blob memory overhead)
+  const url = `/api/v1/volumes/${metadata.id}/nifti`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  // Open TotalSegmentator in new tab
+  window.open('https://totalsegmentator.com', '_blank', 'noopener,noreferrer');
 }
 
 async function _showAIModelPicker(state, metadata) {
