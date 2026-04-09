@@ -525,7 +525,7 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
   toolSec.innerHTML = `
     <button class="tool-btn compact-btn" data-tool="crosshair">⌖</button>
     <button class="tool-btn compact-btn" data-tool="paint" title="Paint">🖌</button>
-    <button class="tool-btn compact-btn" data-tool="region-grow" title="Region Grow">✨</button>
+    <button class="tool-btn compact-btn" data-tool="region-grow" title="Region Grow">Grow2D</button>
   `;
   toolPanel.appendChild(toolSec);
 
@@ -542,10 +542,6 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
         btn.style.background = '#4a9eff';
         btn.style.color = '#fff';
         btn.style.borderColor = '#4a9eff';
-      } else if (btn.getAttribute('data-tool') === 'region-grow') {
-        btn.style.background = '#e6f4ea';
-        btn.style.color = '#2e7d32';
-        btn.style.borderColor = '#2e7d32';
       } else {
         btn.style.background = '#fff';
         btn.style.color = '#1e1e1e';
