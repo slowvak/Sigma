@@ -5,6 +5,17 @@ export function createAppShell() {
   h1.textContent = 'NextEd';
   header.appendChild(h1);
 
+  const helpButton = document.createElement('button');
+  helpButton.textContent = '?';
+  helpButton.className = 'btn btn-secondary';
+  helpButton.title = 'Help';
+  helpButton.setAttribute('aria-label', 'Open help');
+  helpButton.style.marginLeft = 'auto';
+  helpButton.style.fontWeight = 'bold';
+  helpButton.style.fontSize = '1rem';
+  helpButton.style.padding = '4px 10px';
+  header.appendChild(helpButton);
+
   const body = document.createElement('div');
   body.className = 'app-body';
 
@@ -64,5 +75,5 @@ export function createAppShell() {
   app.appendChild(header);
   app.appendChild(body);
 
-  return { listContainer, detailPanel, sidebar, toolPanel, prefsButton, openFolderBtn };
+  return { listContainer, detailPanel, sidebar, toolPanel, prefsButton, openFolderBtn, helpButton };
 }

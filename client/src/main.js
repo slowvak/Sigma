@@ -11,6 +11,7 @@ import { createPresetBar } from './ui/presetBar.js';
 import { refineContourAxial, fillHolesOnSlice } from './viewer/contourRefiner.js';
 import { loadAppConfig, appConfig } from './configStore.js';
 import { openPreferencesModal } from './ui/preferencesModal.js';
+import { openHelpModal } from './ui/helpModal.js';
 import { showFolderPickerModal } from './ui/folderPickerModal.js';
 import { getTaskParams, loadVolumeByPath, loadMaskByPath, completeTask, buildTaskUI } from './taskMode.js';
 
@@ -38,7 +39,7 @@ async function init() {
     // If skipped, continue to show empty volume list
   }
 
-  const { listContainer, detailPanel, sidebar, toolPanel, prefsButton, openFolderBtn } = createAppShell();
+  const { listContainer, detailPanel, sidebar, toolPanel, prefsButton, openFolderBtn, helpButton } = createAppShell();
 
   if (openFolderBtn) {
     openFolderBtn.addEventListener('click', async () => {
@@ -64,6 +65,19 @@ async function init() {
   if (prefsButton) {
     prefsButton.addEventListener('click', openPreferencesModal);
   }
+
+  if (helpButton) {
+    helpButton.addEventListener('click', openHelpModal);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (e.key === '?') {
+      e.preventDefault();
+      openHelpModal();
+    }
+  });
 
   renderEmptyState(detailPanel);
 
