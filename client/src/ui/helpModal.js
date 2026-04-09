@@ -111,35 +111,42 @@ export function openHelpModal() {
   ]));
 
   modal.appendChild(section('Window / Level', [
-    ['Adjust W/L', 'Right-click and drag on any panel \u2014 left/right changes Window, up/down changes Level'],
-    ['Presets', 'Brain, Bone, Lung, Abd \u2014 apply from the W/L dropdown when a volume is open'],
+    ['Adjust W/L', 'Right-click drag on any panel \u2014 left/right changes Window width, up/down changes Level'],
+    ['W/L readout', 'Current values shown as "W: nnn L: nnn" in the tool panel'],
+    ['Presets', 'Brain, Bone, Lung, Abd buttons apply standard radiological window/level presets instantly'],
   ]));
 
-  modal.appendChild(section('Tools (Tool Panel)', [
+  modal.appendChild(section('Tools', [
     ['Crosshair \u2316', 'Navigate: click to set crosshair position across all views'],
-    ['Paint \ud83d\udd8c', 'Freehand brush \u2014 left-click drag to paint the active label'],
-    ['Region Grow \u2728', 'Click a seed voxel; adjust min/max intensity range to grow the region'],
-    ['Brush Radius', 'Slider in the tool panel controls paint brush size'],
-    ['Brush Depth', 'Number of adjacent slices the brush paints through simultaneously'],
-    ['Intensity Limits', 'Constrain paint to voxels within a min/max intensity range'],
+    ['Paint \u270f', 'Freehand brush \u2014 left-click drag to paint the active label'],
+    ['Grow2D', 'Click a seed voxel on the current slice; the region expands to connected voxels whose intensity falls within the Min\u2013Max range. The range auto-sets to mean\u00b1stdev of the 5\u00d75 patch around the seed and can be adjusted with the dual slider or typed into the number fields.'],
+    ['Brush Radius', 'Slider controls paint brush size in pixels'],
+    ['Brush Depth', 'Number of adjacent slices the brush paints through simultaneously (odd numbers only)'],
+    ['Intensity Limits', 'Constrain paint to voxels within a min/max HU range'],
+    ['Label Overlay Opacity', 'Controls how opaque the segmentation colour overlay appears (0\u2013100%)'],
   ]));
 
   modal.appendChild(section('Actions', [
-    ['Undo', 'Ctrl+Z \u2014 undoes the last paint or region grow stroke'],
-    ['Refine Contour', 'Smooths and tightens the boundary of the active label on the current slice'],
-    ['Propagate', 'Copies the label from the adjacent slice and refines it \u2014 useful for propagating contours through a stack'],
-    ['Fill Holes', 'Fills enclosed background regions within each 2D label component on the current slice'],
-    ['Save As...', 'Writes the current segmentation back to the server as a NIfTI file'],
+    ['Undo', 'Ctrl+Z \u2014 reverts the last paint, grow, refine, propagate, or fill operation (up to 3 levels)'],
+    ['Refine', 'Snaps the active label boundary to image edges on the current axial slice using Sobel gradient'],
+    ['Propagate', 'Copies the label from the adjacent slice and refines it \u2014 step through a stack slice by slice'],
+    ['Fill Holes', 'Fills enclosed background regions within each connected component of the active label on this slice'],
+    ['Filter', 'Smooths the raw image intensities. Options: 2D/3D, Mean/Median/Sigma (Gaussian-weighted mean), kernel size 3/5/7, apply to current Slice or entire Volume. A progress bar shows completion.'],
+    ['Save As...', 'Writes the current segmentation back to the server as a NIfTI mask file'],
   ]));
 
   modal.appendChild(section('Labels', [
-    ['Label Panel', 'Shows all segmentation labels; click to select the active label for painting'],
-    ['Add / Rename', 'Add new labels or rename existing ones from the label panel'],
+    ['Label list', 'Shows all segmentation labels. Click a label to make it active for painting.'],
+    ['Eye icon', 'Toggle visibility of a label in the overlay'],
+    ['Colour swatch', 'Click to change the label colour'],
+    ['+ button', 'Add a new label; prompts for a name and assigns the next available colour'],
+    ['Erase', 'Select Erase to remove voxels of any label with the paint brush'],
   ]));
 
   modal.appendChild(section('AI', [
-    ['\ud83e\udd16 AI Button', 'Runs configured AI segmentation models (configure in Preferences \u2192 AI Configuration)'],
-    ['TotalSegmentator', 'Downloads the current volume and opens TotalSegmentator for full-body auto-segmentation'],
+    ['\ud83e\udd16 AI button', 'Opens the AI model picker. Choose a configured server-side model or TotalSegmentator.'],
+    ['TotalSegmentator', 'Downloads the current volume as NIfTI and opens totalsegmentator.com for full-body auto-segmentation'],
+    ['Server models', 'Add custom models in models/ai-models.json; they appear in the AI picker automatically'],
   ]));
 
   modal.appendChild(section('Keyboard Shortcuts', [
