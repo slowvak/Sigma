@@ -24,6 +24,9 @@ export class ViewerState {
     this.dataMin = dataMin;
     this.dataMax = dataMax;
 
+    // Raw image volume — Float32Array set after loading
+    this.volume = null;
+
     // Start at center slice of each dimension (VIEW-02)
     this.cursor = [
       Math.floor(dims[0] / 2),

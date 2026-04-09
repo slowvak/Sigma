@@ -220,6 +220,7 @@ async function initTaskMode(taskParams) {
     detailPanel.innerHTML = '';
     if (currentLayout) { currentLayout.destroy(); currentLayout = null; }
     currentLayout = new FourPanelLayout({ container: detailPanel, state });
+    state.volume = float32Volume;
     currentLayout.setVolume(float32Volume, dims, spacing);
 
     // Set up tool panel (edit modes)
@@ -390,6 +391,7 @@ async function openVolume(volume, { detailPanel, sidebar, toolPanel }) {
     // Set up viewer in detail panel
     detailPanel.innerHTML = '';
     currentLayout = new FourPanelLayout({ container: detailPanel, state });
+    state.volume = float32Volume;
     currentLayout.setVolume(float32Volume, dims, spacing);
 
     // Hide sidebar, set up unified tool panel
@@ -701,30 +703,41 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
     state.notify();
   });
 
+  actionRow.appendChild(undoBtn);
+  actionRow.appendChild(refineBtn);
+  actionRow.appendChild(propagateBtn);
+  toolPanel.appendChild(actionRow);
+
+  // Fill Holes + Filter row (each half width)
+  const morphRow = document.createElement('div');
+  morphRow.className = 'tool-section compact';
+  morphRow.style.flexDirection = 'row';
+  morphRow.style.gap = '4px';
+
   const fillHolesBtn = document.createElement('button');
   fillHolesBtn.className = 'compact-btn action-btn';
   fillHolesBtn.title = 'Fill holes in each connected component of the active label on this slice';
   fillHolesBtn.textContent = '⬡ Fill Holes';
-
   fillHolesBtn.addEventListener('click', () => {
-    if (!state.segVolume || state.activeLabel === 0) {
-      alert('No active label selected.');
-      return;
-    }
+    if (!state.segVolume || state.activeLabel === 0) { alert('No active label selected.'); return; }
     const diff = fillHolesOnSlice(state.segVolume, state.dims, state.cursor[2], state.activeLabel);
-    if (!diff) {
-      alert('No holes found on this slice.');
-      return;
-    }
+    if (!diff) { alert('No holes found on this slice.'); return; }
     state.pushUndo(diff);
     state.notify();
   });
 
-  actionRow.appendChild(undoBtn);
-  actionRow.appendChild(refineBtn);
-  actionRow.appendChild(propagateBtn);
-  actionRow.appendChild(fillHolesBtn);
-  toolPanel.appendChild(actionRow);
+  const filterBtn = document.createElement('button');
+  filterBtn.className = 'compact-btn action-btn';
+  filterBtn.title = 'Smooth / filter the active label mask';
+  filterBtn.textContent = 'Filter';
+  filterBtn.addEventListener('click', () => {
+    if (!state.segVolume || state.activeLabel === 0) { alert('No active label selected.'); return; }
+    _showFilterModal(state);
+  });
+
+  morphRow.appendChild(fillHolesBtn);
+  morphRow.appendChild(filterBtn);
+  toolPanel.appendChild(morphRow);
 
   // AI button
   const aiBtn = document.createElement('button');
@@ -1275,6 +1288,127 @@ async function _showAIModelPicker(state, metadata) {
       }
     });
   });
+}
+
+function _showFilterModal(state) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;';
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'background:#1e1e1e;padding:24px;border-radius:8px;width:340px;border:1px solid #3a3a3a;box-shadow:0 10px 30px rgba(0,0,0,0.6);color:#e0e0e0;font-size:13px;';
+
+  function radioRow(name, options, defaultVal) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;gap:12px;flex-wrap:wrap;';
+    options.forEach(({ label, value }) => {
+      const id = `flt-${name}-${value}`;
+      const lbl = document.createElement('label');
+      lbl.style.cssText = 'display:flex;align-items:center;gap:4px;cursor:pointer;';
+      const inp = document.createElement('input');
+      inp.type = 'radio'; inp.name = name; inp.value = value;
+      if (value === defaultVal) inp.checked = true;
+      lbl.appendChild(inp); lbl.appendChild(document.createTextNode(label));
+      wrap.appendChild(lbl);
+    });
+    return wrap;
+  }
+
+  function section(title, content) {
+    const div = document.createElement('div');
+    div.style.cssText = 'margin-bottom:14px;';
+    const h = document.createElement('div');
+    h.style.cssText = 'font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;';
+    h.textContent = title;
+    div.appendChild(h); div.appendChild(content);
+    return div;
+  }
+
+  const title = document.createElement('div');
+  title.textContent = 'Label Filter';
+  title.style.cssText = 'font-size:15px;font-weight:600;margin-bottom:18px;color:#fff;';
+  modal.appendChild(title);
+
+  modal.appendChild(section('Mode', radioRow('flt-mode', [{ label: '2D', value: '2d' }, { label: '3D', value: '3d' }], '2d')));
+  modal.appendChild(section('Filter Type', radioRow('flt-type', [
+    { label: 'Mean', value: 'mean' }, { label: 'Median', value: 'median' }, { label: 'Sigma', value: 'sigma' }
+  ], 'median')));
+  modal.appendChild(section('Kernel Size', radioRow('flt-kernel', [
+    { label: '3', value: '3' }, { label: '5', value: '5' }, { label: '7', value: '7' }
+  ], '3')));
+  modal.appendChild(section('Apply To', radioRow('flt-scope', [
+    { label: 'Slice', value: 'slice' }, { label: 'Volume', value: 'volume' }
+  ], 'slice')));
+
+  // Progress section (hidden until Go)
+  const progressSec = document.createElement('div');
+  progressSec.style.cssText = 'margin-bottom:14px;display:none;';
+  const progressLabel = document.createElement('div');
+  progressLabel.style.cssText = 'font-size:11px;color:#888;margin-bottom:4px;';
+  progressLabel.textContent = 'Progress';
+  const progressTrack = document.createElement('div');
+  progressTrack.style.cssText = 'height:6px;background:#333;border-radius:3px;overflow:hidden;';
+  const progressBar = document.createElement('div');
+  progressBar.style.cssText = 'height:100%;width:0%;background:#4a9eff;transition:width 0.1s;border-radius:3px;';
+  progressTrack.appendChild(progressBar);
+  progressSec.appendChild(progressLabel); progressSec.appendChild(progressTrack);
+  modal.appendChild(progressSec);
+
+  // Buttons row
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:10px;justify-content:flex-end;margin-top:4px;';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.style.cssText = 'padding:7px 16px;border-radius:4px;border:1px solid #555;background:#2a2a2a;color:#ccc;cursor:pointer;font-size:13px;';
+  cancelBtn.onclick = () => overlay.remove();
+
+  const goBtn = document.createElement('button');
+  goBtn.textContent = 'Go';
+  goBtn.style.cssText = 'padding:7px 20px;border-radius:4px;border:none;background:#4a9eff;color:#fff;cursor:pointer;font-size:13px;font-weight:600;';
+
+  goBtn.onclick = async () => {
+    const getRadio = (name) => {
+      const el = modal.querySelector(`input[name="${name}"]:checked`);
+      return el ? el.value : null;
+    };
+    const mode       = getRadio('flt-mode');
+    const filterType = getRadio('flt-type');
+    const kernelSize = parseInt(getRadio('flt-kernel'), 10);
+    const applyTo    = getRadio('flt-scope');
+
+    if (!state.volume || !state.dims) {
+      alert('No image loaded.');
+      return;
+    }
+
+    // Lock UI
+    goBtn.disabled = true; cancelBtn.disabled = true;
+    progressSec.style.display = '';
+    progressBar.style.width = '0%';
+
+    const sliceZ = state.cursor[2];
+
+    try {
+      const { applyImageFilter } = await import('./viewer/imageFilter.js');
+      await applyImageFilter(
+        state.volume, state.dims,
+        { mode, filterType, kernelSize, applyTo, sliceZ },
+        (p) => { progressBar.style.width = `${Math.round(p * 100)}%`; }
+      );
+
+      state.notify();
+    } catch (err) {
+      alert(`Filter error: ${err.message}`);
+    }
+
+    overlay.remove();
+  };
+
+  btnRow.appendChild(cancelBtn); btnRow.appendChild(goBtn);
+  modal.appendChild(btnRow);
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
 }
 
 init();

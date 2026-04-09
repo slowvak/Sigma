@@ -1,1 +1,36 @@
+# Python
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Logs
+*.log
+
+# Node
+node_modules/
+.vite/
+
+# Vite / build output
+client/dist/
+
+# Editor / OS
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Config with local paths / secrets
+config.json
+
+# Claude Code agent worktrees
+.claude/worktrees/
+
+# Misc project artifacts
+server/test.log
