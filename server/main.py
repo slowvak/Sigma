@@ -43,7 +43,7 @@ async def _background_scan_and_watch(app_instance: FastAPI):
 
     scan_paths = getattr(app_instance.state, '_scan_paths', [])
     if scan_paths:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, _perform_scan, scan_paths)
         print(f"\n{len(_catalog)} volume(s) ready.")
 
@@ -180,7 +180,7 @@ async def trigger_rescan():
     if config.get("source_directory"):
         paths = [config["source_directory"]]
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     count = await loop.run_in_executor(None, _perform_scan, paths)
 
     # Update watcher paths for new directory

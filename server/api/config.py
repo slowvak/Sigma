@@ -160,7 +160,7 @@ async def browse_folder():
     Runs the blocking dialog in a thread-pool executor so the async event loop
     stays responsive while the user interacts with the dialog.
     """
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     folder = await loop.run_in_executor(None, _open_native_folder_dialog)
     return {"path": folder}
 
