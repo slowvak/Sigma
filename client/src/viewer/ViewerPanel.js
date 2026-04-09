@@ -614,12 +614,8 @@ export class ViewerPanel {
     this.state.regionGrowAxis = this.axis;
     this.state.executeRegionGrow = () => this._applyRegionGrow();
 
-    // Check if label already has saved bounds
-    const label = this.state.labels.get(this.state.activeLabel);
-    if (!label || label.regionGrowMin === undefined || label.regionGrowMax === undefined) {
-      // Default range: mean ± stdev of the 5×5 seed patch
-      this.state.setRegionGrowRange(Math.round(mean - stdev), Math.round(mean + stdev));
-    }
+    // Always reset range to mean ± stdev of the seed patch on each click
+    this.state.setRegionGrowRange(Math.round(mean - stdev), Math.round(mean + stdev));
     
     // The apply function reads the latest regionGrowMin/Max from state
     this._applyRegionGrow();
