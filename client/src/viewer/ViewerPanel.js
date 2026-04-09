@@ -585,6 +585,22 @@ export class ViewerPanel {
 
     const mean = count > 0 ? sum / count : 0;
 
+    // Second pass: standard deviation over the same 5×5 patch
+    let sumSq = 0;
+    for (let u = uCenter - 2; u <= uCenter + 2; u++) {
+      for (let v = vCenter - 2; v <= vCenter + 2; v++) {
+        let x, y, z;
+        if (this.axis === 'axial') { x = u; y = v; z = fixedDepth; }
+        else if (this.axis === 'coronal') { x = u; y = fixedDepth; z = v; }
+        else { x = fixedDepth; y = u; z = v; }
+        if (x >= 0 && x < dimX && y >= 0 && y < dimY && z >= 0 && z < dimZ) {
+          const diff = this.volume[z * dimX * dimY + y * dimX + x] - mean;
+          sumSq += diff * diff;
+        }
+      }
+    }
+    const stdev = count > 0 ? Math.sqrt(sumSq / count) : 50;
+
     // Save previous diff (if any applied and committed)
     if (this._currentDiff) {
       delete this._currentDiff.seen;
@@ -601,8 +617,8 @@ export class ViewerPanel {
     // Check if label already has saved bounds
     const label = this.state.labels.get(this.state.activeLabel);
     if (!label || label.regionGrowMin === undefined || label.regionGrowMax === undefined) {
-      // Default range (mean ± 50, adjustable by user later)
-      this.state.setRegionGrowRange(mean - 50, mean + 50);
+      // Default range: mean ± stdev of the 5×5 seed patch
+      this.state.setRegionGrowRange(Math.round(mean - stdev), Math.round(mean + stdev));
     }
     
     // The apply function reads the latest regionGrowMin/Max from state
