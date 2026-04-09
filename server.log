@@ -1,0 +1,254 @@
+AI config expects unified config.json
+
+Starting server on http://localhost:8050
+Volume data will be loaded on demand when opened in the viewer.
+INFO:     Started server process [11736]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+Scanning for volumes...
+INFO:     Uvicorn running on http://0.0.0.0:8050 (Press CTRL+C to quit)
+Discovered 11 volume(s) in 1.1s
+Loading 11 volume(s) from cache...
+Loaded 11 volume(s) from cache in 0.00s
+
+11 volume(s) ready.
+Warning: watchdog not installed — filesystem watching disabled. Run `uv add watchdog` to enable live volume detection.
+INFO:     127.0.0.1:59130 - "GET /api/v1/config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59132 - "GET /api/v1/volumes HTTP/1.1" 200 OK
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59135 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59138 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59143 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59151 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59254 - "GET /api/v1/config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59256 - "GET /api/v1/volumes HTTP/1.1" 200 OK
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59259 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59263 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59268 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59271 - "GET /api/v1/volumes/c2beb2dbd0a2/metadata HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59272 - "GET /api/v1/volumes/c2beb2dbd0a2/data HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59274 - "GET /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59277 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59280 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59283 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59292 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59308 - "GET /api/v1/config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59310 - "GET /api/v1/volumes HTTP/1.1" 200 OK
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59313 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59322 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59336 - "GET /api/v1/volumes/c2beb2dbd0a2/metadata HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59337 - "GET /api/v1/volumes/c2beb2dbd0a2/data HTTP/1.1" 200 OK
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59339 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59342 - "GET /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59345 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59348 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59351 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59362 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59404 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59438 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59464 - "GET /api/v1/config HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59466 - "GET /api/v1/volumes HTTP/1.1" 200 OK
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59469 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59472 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59478 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59485 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59491 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59505 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59523 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59553 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59576 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59603 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59620 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59645 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59688 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59728 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59764 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59784 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59798 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59816 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59835 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59873 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59916 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59939 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:59974 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:60015 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:60040 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:60061 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:60082 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60104 - "GET /api/v1/volumes/c2beb2dbd0a2/metadata HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60106 - "GET /api/v1/volumes/c2beb2dbd0a2/data HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60109 - "GET /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60112 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60118 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60121 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:60125 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60128 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60131 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60134 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60137 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60140 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60143 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:60162 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60174 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60177 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60180 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60183 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60187 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60190 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60193 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60198 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60202 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60206 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60209 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60212 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60215 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60218 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60221 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60224 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60227 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60230 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60233 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60236 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60239 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60242 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60245 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60248 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60251 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60254 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60257 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60260 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60263 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60266 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60269 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60275 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60278 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60282 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60285 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60288 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60291 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60294 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60297 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60300 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60303 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60306 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60309 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60312 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60315 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60318 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60321 - "PUT /api/v1/volumes/c2beb2dbd0a2/labels HTTP/1.1" 200 OK
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:60325 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:60347 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:60369 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:60399 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:60433 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:60453 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:60471 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:60557 - "GET /api/v1/ws HTTP/1.1" 404 Not Found
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+INFO:     127.0.0.1:60601 - "GET /api/v1/ws HTTP/1.1" 404 Not Found

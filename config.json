@@ -1,0 +1,55 @@
+{
+  "source_directory": "/Users/bje/Desktop/CTs/CAP/00000001",
+  "window_level_presets": {
+    "Brain": {
+      "center": 40,
+      "width": 80
+    },
+    "Bone": {
+      "center": 500,
+      "width": 3000
+    },
+    "Lung": {
+      "center": -500,
+      "width": 1000
+    },
+    "Abd": {
+      "center": 125,
+      "width": 450
+    }
+  },
+  "default_labels": {
+    "1": "Label 1",
+    "2": "Label 2",
+    "3": "Label 3",
+    "4": "Label 4",
+    "5": "Label 5"
+  },
+  "ai": {
+    "server": "http://localhost:8080",
+    "models": [
+      {
+        "id": "totalsegmentator",
+        "name": "TotalSegmentator",
+        "description": "104-structure CT segmentation (fast mode)",
+        "modality": [
+          "CT"
+        ],
+        "endpoint": "/predict",
+        "weights": "totalsegmentator_v2",
+        "accepts_labels": false,
+        "labels": []
+      },
+      {
+        "id": "refine-seg",
+        "name": "Refine Segmentation",
+        "description": "Refines existing label boundaries using image features",
+        "modality": [],
+        "endpoint": "/predict",
+        "weights": "refine_v1",
+        "accepts_labels": true,
+        "labels": []
+      }
+    ]
+  }
+}
