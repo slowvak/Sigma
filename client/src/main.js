@@ -775,7 +775,30 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
     _showFilterModal(state);
   });
 
+  const clearSliceBtn = document.createElement('button');
+  clearSliceBtn.className = 'compact-btn action-btn';
+  clearSliceBtn.title = 'Remove all labels on the current axial slice';
+  clearSliceBtn.textContent = 'Clear Slice';
+  clearSliceBtn.addEventListener('click', () => {
+    if (!state.segVolume || !state.dims) return;
+    const [dimX, dimY] = state.dims;
+    const sliceSize = dimX * dimY;
+    const base = state.cursor[2] * sliceSize;
+    const indices = [], oldValues = [];
+    for (let i = 0; i < sliceSize; i++) {
+      if (state.segVolume[base + i] !== 0) {
+        indices.push(base + i);
+        oldValues.push(state.segVolume[base + i]);
+        state.segVolume[base + i] = 0;
+      }
+    }
+    if (indices.length === 0) return;
+    state.pushUndo({ indices, oldValues });
+    state.notify();
+  });
+
   morphRow.appendChild(fillHolesBtn);
+  morphRow.appendChild(clearSliceBtn);
   morphRow.appendChild(filterBtn);
   toolPanel.appendChild(morphRow);
 
