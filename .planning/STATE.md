@@ -62,6 +62,7 @@ None yet.
 | 260408-dk9 | Add TotalSegmentator button to AI section that uploads current volume to totalsegmentator.com website | 2026-04-08 | 30c717a | [260408-dk9-add-totalsegmentator-button-to-ai-sectio](./quick/260408-dk9-add-totalsegmentator-button-to-ai-sectio/) |
 | 260409-h8h | Fix Region Grow button styling in updateActiveTool to use green tint for inactive state | 2026-04-09 | cc198a6 | [260409-h8h-fix-region-grow-button-styling-in-update](./quick/260409-h8h-fix-region-grow-button-styling-in-update/) |
 | 260413-l5j | Combine Cursor/Paint/Grow2D tool buttons into a single dropdown selector | 2026-04-13 | da07131 | [260413-l5j-combine-the-buttons-for-cursor-paint-reg](./quick/260413-l5j-combine-the-buttons-for-cursor-paint-reg/) |
+| 260413-lbs | Region Grow skips already-labeled voxels; BFS routes around existing labels | 2026-04-13 | 781b7ed | [260413-lbs-make-grow-2d-only-grow-add-pixels-that-a](./quick/260413-lbs-make-grow-2d-only-grow-add-pixels-that-a/) |
 
 ### Blockers/Concerns
 
@@ -71,7 +72,7 @@ None yet.
 
 ## Session Continuity
 
-Last activity: 2026-04-09 - Completed quick task 260409-h8h: Fix Region Grow button styling in updateActiveTool to use green tint for inactive state
+Last activity: 2026-04-13 - Completed quick task 260413-lbs: Region Grow skips already-labeled voxels; BFS routes around existing labels
 Last session: 2026-04-06T18:13:30.005Z
 Stopped at: Completed 08-01-PLAN.md
 Resume file: None
