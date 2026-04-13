@@ -963,8 +963,12 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
 
   const handleAddLabel = () => {
       if (!state.segVolume) {
+          // Create empty segVolume directly — do NOT call setSegmentation()
+          // because that calls discoverLabels() on an empty array and wipes
+          // any labels already in state.labels.
           const [dx, dy, dz] = state.dims;
-          state.setSegmentation(new Uint8Array(dx*dy*dz), state.dims, []);
+          state.segVolume = new Uint8Array(dx * dy * dz);
+          state.segDims = [...state.dims];
       }
       const name = prompt("Enter label name:", "New Label");
       if (name) {
@@ -1017,7 +1021,7 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
         <div style="width:12px;height:12px;background:#fff;margin-right:8px;border-radius:2px;border:1px solid #999;position:relative;overflow:hidden;">
           <div style="position:absolute;top:-1px;left:4px;color:#c00;font-size:14px;line-height:12px;">╲</div>
         </div>
-        <span style="font-size:12px;flex:1;color:#888;">Erase</span>
+        <span style="font-size:12px;flex:1;color:#888;">No Label</span>
       `;
       row.addEventListener('click', () => state.setActiveLabel(0));
       labelsSec.appendChild(row);
