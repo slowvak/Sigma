@@ -1079,6 +1079,10 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
       row.addEventListener('click', (e) => {
         if (!e.target.closest('.vis-toggle')) {
           state.setActiveLabel(val);
+        }
+      });
+      row.addEventListener('dblclick', (e) => {
+        if (!e.target.closest('.vis-toggle')) {
           _showLabelEditPopup(state, val);
         }
       });
