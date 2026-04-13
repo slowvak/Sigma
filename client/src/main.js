@@ -547,29 +547,53 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
   toolSec.style.flexDirection = 'row';
   toolSec.style.gap = '4px';
   toolSec.innerHTML = `
-    <button class="tool-btn compact-btn" data-tool="crosshair">⌖</button>
-    <button class="tool-btn compact-btn" data-tool="paint" title="Paint">🖌</button>
-    <button class="tool-btn compact-btn" data-tool="region-grow" title="Region Grow">Grow2D</button>
+    <div id="tool-dropdown" style="position:relative;flex:1;">
+      <button id="tool-dropdown-btn" class="compact-btn" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:4px;">
+        <span id="tool-dropdown-label">⌖ Cursor</span>
+        <span style="font-size:10px;">▾</span>
+      </button>
+      <div id="tool-dropdown-menu" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:#fff;border:1px solid #ccc;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,0.15);margin-top:2px;">
+        <button class="tool-option compact-btn" data-tool="crosshair" data-label="⌖ Cursor" style="width:100%;text-align:left;border:none;border-radius:0;flex:unset;">⌖ Cursor</button>
+        <button class="tool-option compact-btn" data-tool="paint" data-label="🖌 Paint" style="width:100%;text-align:left;border:none;border-radius:0;flex:unset;">🖌 Paint</button>
+        <button class="tool-option compact-btn" data-tool="region-grow" data-label="⬡ Grow2D" style="width:100%;text-align:left;border:none;border-radius:0;flex:unset;">⬡ Grow2D</button>
+      </div>
+    </div>
   `;
   toolPanel.appendChild(toolSec);
 
-  const toolBtns = toolSec.querySelectorAll('.tool-btn');
-  toolBtns.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      state.setActiveTool(e.currentTarget.getAttribute('data-tool'));
+  const toolDropdownBtn = toolSec.querySelector('#tool-dropdown-btn');
+  const toolDropdownMenu = toolSec.querySelector('#tool-dropdown-menu');
+  const toolDropdownLabel = toolSec.querySelector('#tool-dropdown-label');
+
+  toolDropdownBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = toolDropdownMenu.style.display !== 'none';
+    toolDropdownMenu.style.display = isOpen ? 'none' : 'block';
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!toolSec.contains(e.target)) {
+      toolDropdownMenu.style.display = 'none';
+    }
+  });
+
+  toolSec.querySelectorAll('.tool-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.setActiveTool(btn.getAttribute('data-tool'));
+      toolDropdownMenu.style.display = 'none';
     });
   });
 
   const updateActiveTool = () => {
-    toolBtns.forEach(btn => {
+    const options = toolSec.querySelectorAll('.tool-option');
+    options.forEach(btn => {
       if (btn.getAttribute('data-tool') === state.activeTool) {
-        btn.style.background = '#4a9eff';
-        btn.style.color = '#fff';
-        btn.style.borderColor = '#4a9eff';
+        toolDropdownLabel.textContent = btn.getAttribute('data-label');
+        btn.style.background = '#e8f0fe';
+        btn.style.color = '#4a9eff';
       } else {
-        btn.style.background = '#fff';
-        btn.style.color = '#1e1e1e';
-        btn.style.borderColor = '#ccc';
+        btn.style.background = '';
+        btn.style.color = '';
       }
     });
   };
