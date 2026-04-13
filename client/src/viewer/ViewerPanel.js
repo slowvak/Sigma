@@ -685,28 +685,30 @@ export class ViewerPanel {
         const idx = cz * dimX * dimY + cy * dimX + cx;
         const val = this.volume[idx];
 
-        if (val >= regionGrowMin && val <= regionGrowMax) {
+        // Accept only unlabeled voxels within intensity range
+        if (val >= regionGrowMin && val <= regionGrowMax && this.state.segVolume[idx] === 0) {
             newDiff.indices.push(idx);
             newDiff.oldValues.push(this.state.segVolume[idx]);
             this.state.segVolume[idx] = activeLabel;
+        }
 
-            for (const [dx, dy, dz] of neighbors) {
-                const nx = cx + dx;
-                const ny = cy + dy;
-                const nz = cz + dz;
+        // Always enqueue neighbors (regardless of acceptance) so grow routes around labeled regions
+        for (const [dx, dy, dz] of neighbors) {
+            const nx = cx + dx;
+            const ny = cy + dy;
+            const nz = cz + dz;
 
-                if (nx >= 0 && nx < dimX && ny >= 0 && ny < dimY && nz >= 0 && nz < dimZ) {
-                    let depthOut = false;
-                    if (this.axis === 'axial' && (nz < minD || nz > maxD)) depthOut = true;
-                    if (this.axis === 'coronal' && (ny < minD || ny > maxD)) depthOut = true;
-                    if (this.axis === 'sagittal' && (nx < minD || nx > maxD)) depthOut = true;
+            if (nx >= 0 && nx < dimX && ny >= 0 && ny < dimY && nz >= 0 && nz < dimZ) {
+                let depthOut = false;
+                if (this.axis === 'axial' && (nz < minD || nz > maxD)) depthOut = true;
+                if (this.axis === 'coronal' && (ny < minD || ny > maxD)) depthOut = true;
+                if (this.axis === 'sagittal' && (nx < minD || nx > maxD)) depthOut = true;
 
-                    if (!depthOut) {
-                        const nIdx = nz * dimX * dimY + ny * dimX + nx;
-                        if (!visited[nIdx]) {
-                            visited[nIdx] = 1;
-                            q.push([nx, ny, nz]);
-                        }
+                if (!depthOut) {
+                    const nIdx = nz * dimX * dimY + ny * dimX + nx;
+                    if (!visited[nIdx]) {
+                        visited[nIdx] = 1;
+                        q.push([nx, ny, nz]);
                     }
                 }
             }
