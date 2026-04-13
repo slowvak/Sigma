@@ -409,6 +409,28 @@ async function openVolume(volume, { detailPanel, sidebar, toolPanel }) {
   }
 }
 
+/**
+ * Ensure a real (non-erase) label is active before any overlay-creating operation.
+ * - No labels defined → prompts to create one via state.onLabelRequired()
+ * - Labels exist but erase is selected → alerts user to pick one
+ * Returns true if safe to proceed.
+ */
+function _ensureLabel(state) {
+  const hasRealLabels = [...state.labels.keys()].some(v => v !== 0);
+  if (!hasRealLabels) {
+    if (typeof state.onLabelRequired === 'function') {
+      return state.onLabelRequired() === true;
+    }
+    alert('No labels defined. Add a label with the + button first.');
+    return false;
+  }
+  if (state.activeLabel === 0) {
+    alert('Select a label first — Erase mode is active.');
+    return false;
+  }
+  return true;
+}
+
 function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
   toolPanel.innerHTML = '';
 
@@ -585,10 +607,7 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
   refineBtn.appendChild(document.createTextNode('Refine'));
 
   refineBtn.addEventListener('click', () => {
-    if (!state.segVolume || state.activeLabel === 0) {
-      alert('No active label selected.');
-      return;
-    }
+    if (!_ensureLabel(state)) return;
     const sliceZ = state.cursor[2];
     const diff = refineContourAxial(
       currentLayout.panels.axial.volume,
@@ -611,10 +630,7 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
   propagateBtn.textContent = '⇅ Propagate';
 
   propagateBtn.addEventListener('click', () => {
-    if (!state.segVolume || state.activeLabel === 0) {
-      alert('No active label selected.');
-      return;
-    }
+    if (!_ensureLabel(state)) return;
     const [dimX, dimY, dimZ] = state.dims;
     const sliceSize = dimX * dimY;
     const sliceZ = state.cursor[2];
@@ -719,7 +735,7 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
   fillHolesBtn.title = 'Fill holes in each connected component of the active label on this slice';
   fillHolesBtn.textContent = '⬡ Fill Holes';
   fillHolesBtn.addEventListener('click', () => {
-    if (!state.segVolume || state.activeLabel === 0) { alert('No active label selected.'); return; }
+    if (!_ensureLabel(state)) return;
     const diff = fillHolesOnSlice(state.segVolume, state.dims, state.cursor[2], state.activeLabel);
     if (!diff) { alert('No holes found on this slice.'); return; }
     state.pushUndo(diff);
@@ -731,7 +747,7 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
   filterBtn.title = 'Smooth / filter the active label mask';
   filterBtn.textContent = 'Filter';
   filterBtn.addEventListener('click', () => {
-    if (!state.segVolume || state.activeLabel === 0) { alert('No active label selected.'); return; }
+    if (!state.volume) { alert('No image loaded.'); return; }
     _showFilterModal(state);
   });
 
@@ -1035,6 +1051,7 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
       row.addEventListener('click', (e) => {
         if (!e.target.closest('.vis-toggle')) {
           state.setActiveLabel(val);
+          _showLabelEditPopup(state, val);
         }
       });
       
@@ -1298,6 +1315,118 @@ async function _showAIModelPicker(state, metadata) {
       }
     });
   });
+}
+
+function _showLabelEditPopup(state, val) {
+  const label = state.labels.get(val);
+  if (!label) return;
+
+  // Remove any existing label edit popup
+  document.getElementById('__label-edit-overlay__')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = '__label-edit-overlay__';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.55);z-index:2000;display:flex;align-items:center;justify-content:center;';
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'background:#1e1e1e;padding:24px;border-radius:8px;width:300px;border:1px solid #3a3a3a;box-shadow:0 10px 30px rgba(0,0,0,0.6);color:#e0e0e0;font-size:13px;';
+
+  const title = document.createElement('div');
+  title.textContent = 'Edit Label';
+  title.style.cssText = 'font-size:15px;font-weight:600;margin-bottom:18px;color:#fff;';
+  modal.appendChild(title);
+
+  function field(labelText, inputEl) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'margin-bottom:14px;';
+    const lbl = document.createElement('div');
+    lbl.textContent = labelText;
+    lbl.style.cssText = 'font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px;';
+    wrap.appendChild(lbl);
+    wrap.appendChild(inputEl);
+    return wrap;
+  }
+
+  // Name
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameInput.value = label.name;
+  nameInput.style.cssText = 'width:100%;box-sizing:border-box;background:#2a2a2a;border:1px solid #555;border-radius:4px;color:#e0e0e0;padding:6px 8px;font-size:13px;';
+  modal.appendChild(field('Name', nameInput));
+
+  // Color
+  const { r, g, b } = label.color;
+  const toHex = (v) => v.toString(16).padStart(2, '0');
+  const colorInput = document.createElement('input');
+  colorInput.type = 'color';
+  colorInput.value = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  colorInput.style.cssText = 'width:100%;height:36px;border:none;border-radius:4px;cursor:pointer;background:none;padding:0;';
+  modal.appendChild(field('Color', colorInput));
+
+  // Threshold min
+  const minInput = document.createElement('input');
+  minInput.type = 'number';
+  minInput.value = label.regionGrowMin !== undefined ? label.regionGrowMin : state.regionGrowMin;
+  minInput.style.cssText = 'width:100%;box-sizing:border-box;background:#2a2a2a;border:1px solid #555;border-radius:4px;color:#e0e0e0;padding:6px 8px;font-size:13px;';
+  modal.appendChild(field('Grow Min Intensity', minInput));
+
+  // Threshold max
+  const maxInput = document.createElement('input');
+  maxInput.type = 'number';
+  maxInput.value = label.regionGrowMax !== undefined ? label.regionGrowMax : state.regionGrowMax;
+  maxInput.style.cssText = 'width:100%;box-sizing:border-box;background:#2a2a2a;border:1px solid #555;border-radius:4px;color:#e0e0e0;padding:6px 8px;font-size:13px;';
+  modal.appendChild(field('Grow Max Intensity', maxInput));
+
+  // Buttons
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:10px;justify-content:flex-end;margin-top:6px;';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.style.cssText = 'padding:7px 16px;border-radius:4px;border:1px solid #555;background:#2a2a2a;color:#ccc;cursor:pointer;font-size:13px;';
+  cancelBtn.onclick = () => overlay.remove();
+
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = 'Save';
+  saveBtn.style.cssText = 'padding:7px 20px;border-radius:4px;border:none;background:#4a9eff;color:#fff;cursor:pointer;font-size:13px;font-weight:600;';
+  saveBtn.onclick = () => {
+    const newName = nameInput.value.trim() || label.name;
+    const hex = colorInput.value;
+    const newColor = {
+      r: parseInt(hex.slice(1, 3), 16),
+      g: parseInt(hex.slice(3, 5), 16),
+      b: parseInt(hex.slice(5, 7), 16),
+    };
+    const newMin = parseInt(minInput.value, 10);
+    const newMax = parseInt(maxInput.value, 10);
+
+    state.updateLabel(val, { name: newName, color: newColor });
+
+    // Store thresholds on the label object; update state if active
+    const updated = state.labels.get(val);
+    if (updated) {
+      updated.regionGrowMin = newMin;
+      updated.regionGrowMax = newMax;
+    }
+    if (state.activeLabel === val) {
+      state.regionGrowMin = newMin;
+      state.regionGrowMax = newMax;
+    }
+
+    state.notify();
+    overlay.remove();
+  };
+
+  btnRow.appendChild(cancelBtn);
+  btnRow.appendChild(saveBtn);
+  modal.appendChild(btnRow);
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+
+  // Focus name field
+  setTimeout(() => nameInput.focus(), 0);
 }
 
 function _showFilterModal(state) {

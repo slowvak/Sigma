@@ -3,7 +3,7 @@
 #
 # Components:
 #   API server      → http://localhost:8050  (server/main.py via uv)
-#   UI dev server   → http://localhost:5273  (client/ via vite)
+#   UI dev server   → http://localhost:5275  (client/ via vite)
 #
 # The image folder is chosen from within the app on first launch.
 # It is saved to config.json and remembered on subsequent starts.
@@ -15,7 +15,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 API_PORT=8050
-UI_PORT=5273
+UI_PORT=5275
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 

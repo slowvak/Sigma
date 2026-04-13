@@ -274,18 +274,28 @@ export class ViewerPanel {
         this.canvas.style.cursor = 'grab';
       } else if (this.state.activeTool === 'paint') {
         e.preventDefault();
-        // Ensure label/segVolume exist BEFORE starting paint drag.
-        // onLabelRequired shows a blocking prompt() that swallows mouseup,
-        // so after prompting we return — the next click will start painting.
-        // Prompt when: no segmentation AND (user chose a non-erase label OR no labels exist yet)
         const hasRealLabels = [...this.state.labels.keys()].some(v => v !== 0);
-        if (!this.state.segVolume && (this.state.activeLabel !== 0 || !hasRealLabels)) {
-          if (typeof this.state.onLabelRequired === 'function') {
-            this.state.onLabelRequired();
+        // For paint in erase mode, segVolume must exist (nothing to erase otherwise)
+        if (this.state.activeLabel === 0) {
+          if (!this.state.segVolume) return; // nothing to erase
+          // Erase is valid — fall through
+        } else {
+          // Painting a label: ensure a label exists and is selected
+          if (!hasRealLabels) {
+            if (typeof this.state.onLabelRequired === 'function') {
+              this.state.onLabelRequired();
+            } else {
+              alert('No labels defined. Add a label first.');
+            }
+            return;
           }
-          return;
+          // Create segVolume on first paint
+          if (!this.state.segVolume) {
+            const [dx, dy, dz] = this.state.dims;
+            this.state.segVolume = new Uint8Array(dx * dy * dz);
+            this.state.segDims = [...this.state.dims];
+          }
         }
-        if (!this.state.segVolume) return;
         if (this._currentDiff && !this._isPainting) {
           delete this._currentDiff.seen;
           this.state.pushUndo(this._currentDiff);
@@ -523,19 +533,29 @@ export class ViewerPanel {
    */
   _startRegionGrow(e) {
     const hasRealLabels = [...this.state.labels.keys()].some(v => v !== 0);
-    if (!this.state.segVolume || (this.state.activeLabel === 0 && !hasRealLabels)) {
+
+    if (!hasRealLabels) {
+      // No labels defined at all — prompt to create one
       if (typeof this.state.onLabelRequired === 'function') {
         const success = this.state.onLabelRequired();
         if (!success) return;
       } else {
-        console.warn('[NextEd] Region grow ignored: no active label.');
+        alert('No labels defined. Add a label first.');
         return;
       }
-    }
-    if (this.state.activeLabel === 0) {
-      console.warn('[NextEd] Region grow ignored: erase mode active. Select a label first.');
+    } else if (this.state.activeLabel === 0) {
+      // Labels exist but erase is selected
+      alert('Select a label first — Erase mode is active.');
       return;
     }
+
+    // Ensure segVolume exists
+    if (!this.state.segVolume) {
+      const [dx, dy, dz] = this.state.dims;
+      this.state.segVolume = new Uint8Array(dx * dy * dz);
+      this.state.segDims = [...this.state.dims];
+    }
+
     if (!this.volume) return;
 
     const rect = this.canvas.getBoundingClientRect();
