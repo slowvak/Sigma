@@ -340,7 +340,9 @@ async function openVolume(volume, { detailPanel, sidebar, toolPanel }) {
               color: lb.color || { r: 200, g: 200, b: 200 },
               isVisible: true,
               regionGrowMin: lb.regionGrowMin,
-              regionGrowMax: lb.regionGrowMax
+              regionGrowMax: lb.regionGrowMax,
+              paintConstraintMin: lb.paintConstraintMin,
+              paintConstraintMax: lb.paintConstraintMax
             });
           }
         }
@@ -366,12 +368,14 @@ async function openVolume(volume, { detailPanel, sidebar, toolPanel }) {
       const labels = [];
       for (const [val, lb] of state.labels) {
         if (val === 0) continue;
-        labels.push({ 
-          value: val, 
-          name: lb.name, 
+        labels.push({
+          value: val,
+          name: lb.name,
           color: lb.color,
           regionGrowMin: lb.regionGrowMin,
-          regionGrowMax: lb.regionGrowMax
+          regionGrowMax: lb.regionGrowMax,
+          paintConstraintMin: lb.paintConstraintMin,
+          paintConstraintMax: lb.paintConstraintMax
         });
       }
       fetch(`/api/v1/volumes/${volume.id}/labels`, {

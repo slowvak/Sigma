@@ -191,6 +191,12 @@ export class ViewerState {
   setPaintConstraints(min, max) {
     this.paintConstraintMin = min;
     this.paintConstraintMax = max;
+    // Store paint constraints on the active label
+    const label = this.labels.get(this.activeLabel);
+    if (label) {
+      label.paintConstraintMin = min;
+      label.paintConstraintMax = max;
+    }
     this.notify();
   }
 
@@ -229,6 +235,11 @@ export class ViewerState {
     if (label && label.regionGrowMin !== undefined && label.regionGrowMax !== undefined) {
       this.regionGrowMin = label.regionGrowMin;
       this.regionGrowMax = label.regionGrowMax;
+    }
+    // Also update paint constraints from label if available
+    if (label && label.paintConstraintMin !== undefined && label.paintConstraintMax !== undefined) {
+      this.paintConstraintMin = label.paintConstraintMin;
+      this.paintConstraintMax = label.paintConstraintMax;
     }
     this.notify();
   }
