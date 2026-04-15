@@ -75,6 +75,9 @@ export class ViewerState {
 
     /** @type {Array<function(ViewerState): void>} */
     this.listeners = [];
+
+    /** @type {Array<function(): void>} - called by undo() before popping the stack */
+    this._preUndoHooks = [];
   }
 
   /**
@@ -244,16 +247,37 @@ export class ViewerState {
     this.notify();
   }
 
+  /**
+   * Register a hook that fires before every undo() call.
+   * Panels use this to flush any uncommitted pending diff (e.g. a region grow
+   * that hasn't been pushed to the stack yet) so Ctrl+Z always pops the right entry.
+   * @param {function(): void} fn
+   * @returns {function(): void} Unsubscribe function
+   */
+  addPreUndoHook(fn) {
+    this._preUndoHooks.push(fn);
+    return () => {
+      const idx = this._preUndoHooks.indexOf(fn);
+      if (idx !== -1) this._preUndoHooks.splice(idx, 1);
+    };
+  }
+
+  /**
+   * Push an undo diff (for operations that track individual pixel changes).
+   * @param {{ indices: number[], oldValues: number[] }} diff
+   */
   pushUndo(diff) {
     if (!diff || !diff.indices || diff.indices.length === 0) return;
     this.undoStack.push(diff);
-    if (this.undoStack.length > 3) {
-      this.undoStack.shift(); // Cap at length 3
+    if (this.undoStack.length > 5) {
+      this.undoStack.shift(); // Cap at length 5
     }
     this.notify();
   }
 
   undo() {
+    // Let panels flush uncommitted diffs (e.g. active region grow) onto the stack first
+    for (const fn of this._preUndoHooks) fn();
     if (this.undoStack.length === 0 || !this.segVolume) return;
     const diff = this.undoStack.pop();
     for (let i = 0; i < diff.indices.length; i++) {

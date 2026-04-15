@@ -13,13 +13,13 @@ from server.loaders.nifti_loader import compute_auto_window, load_nifti_volume
 
 
 class TestAutoWindow:
-    """Verify auto-windowing median computation."""
+    """Verify auto-windowing percentile computation."""
 
     def test_auto_window_normal_distribution(self) -> None:
         """Normal case: mixed zero background + signal values.
 
-        compute_auto_window uses the median of foreground voxels for both
-        window center and width.
+        compute_auto_window uses the 1st-99th percentile of foreground voxels
+        so that 98% of signal values are visible with full contrast.
         """
         # Create array: 50% zeros (background) + 50% values in 100-200 range
         background = np.zeros(500, dtype=np.float32)
@@ -28,11 +28,14 @@ class TestAutoWindow:
 
         wc, ww = compute_auto_window(data)
 
-        # Non-zero values are 100-200; median of linspace(100,200,500) = 150
-        expected_median = float(np.median(signal))
+        # Non-zero values are 100-200; p1≈101, p99≈199, center≈150, width≈98
+        p01 = float(np.percentile(signal, 1))
+        p99 = float(np.percentile(signal, 99))
+        expected_center = (p01 + p99) / 2
+        expected_width = p99 - p01
 
-        assert wc == pytest.approx(expected_median, rel=0.01)
-        assert ww == pytest.approx(expected_median, rel=0.01)
+        assert wc == pytest.approx(expected_center, rel=0.01)
+        assert ww == pytest.approx(expected_width, rel=0.01)
 
     def test_auto_window_all_same_values(self) -> None:
         """Edge case: all non-zero voxels have the same value.
