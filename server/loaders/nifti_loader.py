@@ -13,9 +13,9 @@ def compute_auto_window(data: np.ndarray) -> tuple[float, float]:
 
     If data range matches CT Hounsfield Units (d_min < -50, d_max > 0),
     defaults to standard soft-tissue window (center=40, width=400).
-    Otherwise, uses the median of foreground voxels for both center and width.
-    Setting width = median gives a reasonable initial display where the
-    midpoint of the transfer function sits at the median intensity.
+    Otherwise, uses the 1st–99th percentile of foreground voxels so that
+    98% of signal values are visible with full contrast. This handles MRI
+    and other modalities where the data range can vary widely.
     """
     d_min = float(np.min(data))
     d_max = float(np.max(data))
@@ -25,7 +25,7 @@ def compute_auto_window(data: np.ndarray) -> tuple[float, float]:
     if d_min < -50 and d_max > 0:
         return 40.0, 400.0  # Standard soft-tissue window
 
-    # Non-CT path: use median of foreground voxels.
+    # Non-CT path: use percentile-based windowing of foreground voxels.
     # Foreground = voxels above the background level.
     if d_min < 0:
         foreground = data[data > d_min]
@@ -35,11 +35,10 @@ def compute_auto_window(data: np.ndarray) -> tuple[float, float]:
     if foreground.size == 0:
         return float(d_max / 2), float(max(d_max, 1.0))
 
-    median_val = float(np.median(foreground))
-    # Use median as both center and width so the display spans [0, 2*median].
-    # This is a sensible default for MRI where signal varies across sequences.
-    window_center = median_val
-    window_width = max(median_val, 1.0)
+    p01 = float(np.percentile(foreground, 1))
+    p99 = float(np.percentile(foreground, 99))
+    window_center = (p01 + p99) / 2
+    window_width = max(p99 - p01, 1.0)
     return window_center, window_width
 
 

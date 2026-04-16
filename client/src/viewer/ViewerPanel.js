@@ -95,6 +95,9 @@ export class ViewerPanel {
     this._buildDOM();
     this._setupResizeObserver();
     this._setupEventHandlers();
+
+    // Flush any uncommitted region-grow diff onto the undo stack before each undo()
+    this._unsubPreUndo = this.state.addPreUndoHook(() => this._flushPendingDiff());
   }
 
   _buildDOM() {
@@ -358,10 +361,7 @@ export class ViewerPanel {
     this.state.subscribe(() => {
         // Commit region grow diff if we switch tools
         if (this.state.activeTool !== 'region-grow' && this._currentDiff && !this._isPainting) {
-            const diff = this._currentDiff;
-            this._currentDiff = null; // null BEFORE pushUndo to prevent re-entrancy
-            delete diff.seen;
-            this.state.pushUndo(diff);
+            this._flushPendingDiff();
         }
     });
 
@@ -418,6 +418,19 @@ export class ViewerPanel {
         this.state.setCursor(cx + delta, cy, cz);
       }
     }, { passive: false });
+  }
+
+  /**
+   * Push any uncommitted pending diff (e.g. active region grow) to the undo stack.
+   * Safe to call multiple times — nulls _currentDiff after pushing.
+   */
+  _flushPendingDiff() {
+    if (this._currentDiff && !this._isPainting) {
+      const diff = this._currentDiff;
+      this._currentDiff = null; // null BEFORE pushUndo to prevent re-entrancy
+      if (diff.seen) delete diff.seen;
+      this.state.pushUndo(diff);
+    }
   }
 
   /**
@@ -1169,6 +1182,9 @@ export class ViewerPanel {
     }
     if (this._onMouseUp) {
       document.removeEventListener('mouseup', this._onMouseUp);
+    }
+    if (this._unsubPreUndo) {
+      this._unsubPreUndo();
     }
   }
 }

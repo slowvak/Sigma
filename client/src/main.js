@@ -788,15 +788,21 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
     const [dimX, dimY] = state.dims;
     const sliceSize = dimX * dimY;
     const base = state.cursor[2] * sliceSize;
+    // Save undo snapshot before modifying labels
     const indices = [], oldValues = [];
     for (let i = 0; i < sliceSize; i++) {
       if (state.segVolume[base + i] !== 0) {
         indices.push(base + i);
         oldValues.push(state.segVolume[base + i]);
-        state.segVolume[base + i] = 0;
       }
     }
     if (indices.length === 0) return;
+    for (let i = 0; i < sliceSize; i++) {
+      if (state.segVolume[base + i] !== 0) {
+        state.segVolume[base + i] = 0;
+      }
+    }
+    // Create diff from the saved old values
     state.pushUndo({ indices, oldValues });
     state.notify();
   });
@@ -868,9 +874,6 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
   maxInput.addEventListener('change', updateConstraints);
 
   // Region Grow Settings section (hidden by default)
-  const rgSlidMin = -1024;
-  const rgSlidMax = 3000;
-
   const rgSec = document.createElement('div');
   rgSec.className = 'tool-section compact';
   rgSec.style.display = 'none';
@@ -879,8 +882,8 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
     <div style="font-size:11px;color:#888;margin-bottom:6px;">Mean: <span id="rg-mean-val">-</span></div>
     <div class="dual-range-wrap">
       <div class="dual-range-track"><div class="dual-range-fill" id="rg-fill"></div></div>
-      <input type="range" id="rg-min-slider" min="${rgSlidMin}" max="${rgSlidMax}" step="1" value="${state.regionGrowMin}">
-      <input type="range" id="rg-max-slider" min="${rgSlidMin}" max="${rgSlidMax}" step="1" value="${state.regionGrowMax}">
+      <input type="range" id="rg-min-slider" min="-1024" max="3000" step="1" value="${state.regionGrowMin}">
+      <input type="range" id="rg-max-slider" min="-1024" max="3000" step="1" value="${state.regionGrowMax}">
     </div>
     <div style="display:flex;justify-content:space-between;gap:4px;margin-top:4px;">
       <label style="font-size:11px;color:#555;display:flex;align-items:center;gap:3px;flex:1;">
@@ -900,16 +903,42 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
   const rgMinInput = rgSec.querySelector('#rg-min-input');
   const rgMaxInput = rgSec.querySelector('#rg-max-input');
 
+  // Compute slider bounds so the current [min, max] occupies the central third.
+  // Padding = 1× the selection range on each side, clamped to actual data range.
+  const computeRGSliderBounds = (min, max) => {
+    const dataMin = state.dataMin ?? -1024;
+    const dataMax = state.dataMax ?? 3000;
+    const range = Math.max(max - min, 1);
+    return {
+      slidMin: Math.max(dataMin, Math.floor(min - range)),
+      slidMax: Math.min(dataMax, Math.ceil(max + range)),
+    };
+  };
+
+  // Apply slider bounds without touching values.
+  const setRGSliderBounds = (min, max) => {
+    const { slidMin, slidMax } = computeRGSliderBounds(min, max);
+    [rgMinSlider, rgMaxSlider].forEach(s => {
+      s.min = String(slidMin);
+      s.max = String(slidMax);
+    });
+  };
+
+  // Fill bar uses actual slider min/max so it always covers 0–100 % of the track.
   const updateRGFill = () => {
-    const span = rgSlidMax - rgSlidMin;
-    const l = (parseInt(rgMinSlider.value) - rgSlidMin) / span * 100;
-    const r = (parseInt(rgMaxSlider.value) - rgSlidMin) / span * 100;
+    const slidMin = parseInt(rgMinSlider.min);
+    const slidMax = parseInt(rgMaxSlider.max);
+    const span = (slidMax - slidMin) || 1;
+    const l = (parseInt(rgMinSlider.value) - slidMin) / span * 100;
+    const r = (parseInt(rgMaxSlider.value) - slidMin) / span * 100;
     rgFill.style.left = l + '%';
     rgFill.style.width = (r - l) + '%';
   };
   updateRGFill();
 
+  // Full update: recenter bounds then set values + fire region grow.
   const applyRGChange = (minVal, maxVal) => {
+    setRGSliderBounds(minVal, maxVal);
     rgMinSlider.value = String(minVal);
     rgMaxSlider.value = String(maxVal);
     rgMinInput.value = minVal;
@@ -919,19 +948,42 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
     if (state.executeRegionGrow) state.executeRegionGrow();
   };
 
+  // Slider drag: update values live; recentering happens on drag-end (change event).
   rgMinSlider.addEventListener('input', () => {
     let minVal = parseInt(rgMinSlider.value);
     let maxVal = parseInt(rgMaxSlider.value);
-    if (minVal >= maxVal) minVal = maxVal - 1;
-    rgMinSlider.style.zIndex = minVal > (rgSlidMin + rgSlidMax) / 2 ? '5' : '3';
-    applyRGChange(minVal, maxVal);
+    if (minVal >= maxVal) { minVal = maxVal - 1; rgMinSlider.value = String(minVal); }
+    const slidMid = (parseInt(rgMinSlider.min) + parseInt(rgMinSlider.max)) / 2;
+    rgMinSlider.style.zIndex = minVal > slidMid ? '5' : '3';
+    rgMinInput.value = minVal;
+    updateRGFill();
+    state.setRegionGrowRange(minVal, maxVal);
+    if (state.executeRegionGrow) state.executeRegionGrow();
   });
 
   rgMaxSlider.addEventListener('input', () => {
     let minVal = parseInt(rgMinSlider.value);
     let maxVal = parseInt(rgMaxSlider.value);
-    if (maxVal <= minVal) maxVal = minVal + 1;
-    applyRGChange(minVal, maxVal);
+    if (maxVal <= minVal) { maxVal = minVal + 1; rgMaxSlider.value = String(maxVal); }
+    rgMaxInput.value = maxVal;
+    updateRGFill();
+    state.setRegionGrowRange(minVal, maxVal);
+    if (state.executeRegionGrow) state.executeRegionGrow();
+  });
+
+  // On drag-end, recenter the slider bounds around the settled values.
+  rgMinSlider.addEventListener('change', () => {
+    const minVal = parseInt(rgMinSlider.value);
+    const maxVal = parseInt(rgMaxSlider.value);
+    setRGSliderBounds(minVal, maxVal);
+    updateRGFill();
+  });
+
+  rgMaxSlider.addEventListener('change', () => {
+    const minVal = parseInt(rgMinSlider.value);
+    const maxVal = parseInt(rgMaxSlider.value);
+    setRGSliderBounds(minVal, maxVal);
+    updateRGFill();
   });
 
   const commitRGInputs = () => {
@@ -939,9 +991,11 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
     let maxVal = parseInt(rgMaxInput.value, 10);
     if (isNaN(minVal) || isNaN(maxVal)) return;
     if (minVal >= maxVal) minVal = maxVal - 1;
-    // Clamp to slider range
-    minVal = Math.max(rgSlidMin, Math.min(rgSlidMax - 1, minVal));
-    maxVal = Math.max(rgSlidMin + 1, Math.min(rgSlidMax, maxVal));
+    // Clamp to data range (not fixed slider range)
+    const dataMin = state.dataMin ?? -1024;
+    const dataMax = state.dataMax ?? 3000;
+    minVal = Math.max(dataMin, Math.min(dataMax - 1, minVal));
+    maxVal = Math.max(dataMin + 1, Math.min(dataMax, maxVal));
     applyRGChange(minVal, maxVal);
   };
 
@@ -965,13 +1019,14 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
       rgMeanVal.textContent = '-';
     }
 
-    if (state.regionGrowMin !== parseInt(rgMinSlider.value)) {
-      rgMinSlider.value = String(state.regionGrowMin);
-      rgMinInput.value = state.regionGrowMin;
-    }
-    if (state.regionGrowMax !== parseInt(rgMaxSlider.value)) {
-      rgMaxSlider.value = String(state.regionGrowMax);
-      rgMaxInput.value = state.regionGrowMax;
+    const stateMin = state.regionGrowMin;
+    const stateMax = state.regionGrowMax;
+    if (stateMin !== parseInt(rgMinSlider.value) || stateMax !== parseInt(rgMaxSlider.value)) {
+      setRGSliderBounds(stateMin, stateMax);
+      rgMinSlider.value = String(stateMin);
+      rgMaxSlider.value = String(stateMax);
+      rgMinInput.value = stateMin;
+      rgMaxInput.value = stateMax;
     }
     updateRGFill();
   };
