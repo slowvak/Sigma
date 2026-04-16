@@ -86,10 +86,10 @@ async def save_segmentation(volume_id: str, request: Request, filename: str) -> 
     DICOM volumes produce DICOM-SEG (.dcm); NIfTI volumes produce NIfTI (.nii.gz).
     Format is selected automatically -- the client does not choose (per D-01).
     """
-    from server.main import _catalog, _segmentation_catalog, suppress_list
-    from server.api.volumes import _volume_cache, _path_registry
+    from server.main import _segmentation_catalog, suppress_list
+    from server.api.volumes import _volume_cache, _path_registry, _metadata_registry
 
-    vol_meta = next((v for v in _catalog if v.id == volume_id), None)
+    vol_meta = _metadata_registry.get(volume_id)
     if not vol_meta:
         raise HTTPException(status_code=404, detail=f"Volume {volume_id} not found")
 
