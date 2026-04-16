@@ -2,7 +2,7 @@ export function createAppShell() {
   const header = document.createElement('header');
   header.className = 'app-header';
   const h1 = document.createElement('h1');
-  h1.innerHTML = 'ΣIGMA <span style="font-size:0.5em;font-weight:normal;opacity:0.7;letter-spacing:0.01em;">Segmentation &amp; Image Guided Medical Annotation</span>';
+  h1.innerHTML = 'ΣIGMA <span style="font-weight:normal;opacity:0.7;">Segmentation &amp; Image Guided Medical Annotation</span>';
   header.appendChild(h1);
 
   const helpButton = document.createElement('button');
