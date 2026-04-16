@@ -510,9 +510,11 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
   };
   document.addEventListener('keydown', handleKeydown);
 
-  // Dirty tracking: segVersion at the time the mask was last saved (or loaded from disk).
-  // -1 means never saved; set to state.segVersion after a successful save or disk load.
-  let _savedSegVersion = _maskLoaded ? -1 : state.segVersion;
+  // One O(n) scan at init; everything else uses this flag.
+  let _maskLoaded = !!(state.segVolume && state.segVolume.some(v => v !== 0));
+
+  // Dirty tracking: segVersion snapshot at last save/load. Dirty when segVersion advances past this.
+  let _savedSegVersion = state.segVersion;
   const _isDirty = () => _maskLoaded && state.segVersion !== _savedSegVersion;
 
   const _navigateBack = () => {
@@ -627,9 +629,7 @@ function _setupToolPanel(toolPanel, state, metadata, sidebar, detailPanel) {
     fileInput.click();
   });
 
-  // "Save As" shows only when mask data actually exists; otherwise show "Load Label Mask".
-  // Init: one O(n) scan; after that use undoStack as an O(1) proxy for first-paint.
-  let _maskLoaded = !!(state.segVolume && state.segVolume.some(v => v !== 0));
+  // Button visibility helpers — defined after saveBtn/loadMaskBtn are in scope.
   const _showSaveBtn = () => { saveBtn.style.display = ''; loadMaskBtn.style.display = 'none'; };
   const _showLoadBtn = () => { saveBtn.style.display = 'none'; loadMaskBtn.style.display = ''; };
   if (_maskLoaded) {
