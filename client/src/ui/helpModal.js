@@ -127,7 +127,7 @@ export function openHelpModal() {
   ]));
 
   modal.appendChild(section('Actions', [
-    ['Undo', 'Ctrl+Z \u2014 reverts the last paint, grow, refine, propagate, or fill operation (up to 3 levels)'],
+    ['Undo', 'Ctrl+Z \u2014 reverts the last paint, grow, refine, propagate, or fill operation (up to 5 levels)'],
     ['Refine', 'Snaps the active label boundary to image edges on the current axial slice using Sobel gradient'],
     ['Propagate', 'Copies the label from the adjacent slice and refines it \u2014 step through a stack slice by slice'],
     ['Fill Holes', 'Fills enclosed background regions within each connected component of the active label on this slice'],
