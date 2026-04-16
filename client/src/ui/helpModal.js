@@ -133,7 +133,10 @@ export function openHelpModal() {
     ['Fill Holes', 'Fills enclosed background regions within each connected component of the active label on this slice'],
     ['Clear Slice', 'Removes all voxels of the active label on the current slice only'],
     ['Filter', 'Smooths the raw image intensities. Options: 2D/3D, Mean/Median/Sigma (Gaussian-weighted mean), kernel size 3/5/7, apply to current Slice or entire Volume. A progress bar shows completion.'],
-    ['Save As...', 'Writes the current segmentation back to the server as a NIfTI mask file'],
+    ['Load Label Mask', 'Shown when no mask is loaded. Opens a file picker \u2014 select any NIfTI (.nii or .nii.gz) file to load it as the label mask. Labels are auto-detected from the unique non-zero values in the file.'],
+    ['Save Label As...', 'Shown once a mask exists. Opens a dialog with the full suggested save path pre-filled (same directory as the source volume, named <volume>_seg.nii.gz). Edit the path as needed, then click Save.'],
+    ['Auto-load on open', 'When opening a volume, SIGMA checks for a companion <name>_seg.nii.gz file in the same folder and offers to load it automatically.'],
+    ['Unsaved changes', 'If you click \u2190 Back to Volumes with unsaved mask changes, SIGMA will prompt you to save or discard before leaving.'],
   ]));
 
   modal.appendChild(section('Labels', [
