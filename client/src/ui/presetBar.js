@@ -91,16 +91,7 @@ export function createPresetBar(state) {
     btn.setAttribute('aria-pressed', 'false');
 
     btn.addEventListener('click', () => {
-      // For CT volumes, apply HU-based presets directly.
-      // For unknown modality, scale preset proportionally to actual data range.
-      let center = preset.center;
-      let width = preset.width;
-      if (state.modality !== 'CT' && state.dataMin !== null && state.dataMax !== null) {
-        ({ center, width } = scalePresetToDataRange(
-          preset.name, state.dataMin, state.dataMax
-        ));
-      }
-      state.setPreset(preset.name, center, width);
+      state.setPreset(preset.name, preset.center, preset.width);
     });
 
     container.appendChild(btn);
