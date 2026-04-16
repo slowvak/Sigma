@@ -1,7 +1,7 @@
 [project]
-name = "nexted-server"
+name = "sigma-server"
 version = "0.1.0"
-description = "NextEd medical image server"
+description = "SIGMA medical image server"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",

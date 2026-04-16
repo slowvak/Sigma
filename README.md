@@ -1,12 +1,12 @@
-# NextEd
+# ΣIGMA — Segmentation & Image Guided Medical Annotation
 
-**NextEd** is a web-based medical image viewer and segmentation editor for researchers and radiologists. It supports DICOM and NIfTI volumes — no desktop install required.
+**ΣIGMA** is a web-based medical image viewer and segmentation editor for researchers and radiologists. It supports DICOM and NIfTI volumes — no desktop install required.
 
 ---
 
 ## Features
 
-- **Folder-based catalog** — point NextEd at a folder and it discovers all volumes automatically (each volume typically maps to a CT or MRI series)
+- **Folder-based catalog** — point ΣIGMA at a folder and it discovers all volumes automatically (each volume typically maps to a CT or MRI series)
 - **4-panel viewer** — Axial, Coronal, Sagittal, and Oblique views rendered side-by-side
 - **Single-panel mode** — click `A`, `C`, or `S` in the corner of any panel to expand it; press `4` to return to the 4-panel layout
 - **Synchronized crosshairs** — scroll the mouse wheel to move through slices; crosshairs update across all panels
@@ -26,8 +26,8 @@
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/slowvak/NextEd.git
-cd NextEd
+git clone https://github.com/slowvak/SIGMA.git
+cd SIGMA
 
 # 2. Set up the Python environment
 uv venv
@@ -53,7 +53,7 @@ This starts both the FastAPI backend and the Vite dev server. Open your browser 
 
 ## Usage
 
-1. Click **Open Folder** to select a directory — NextEd will scan it for DICOM and NIfTI volumes
+1. Click **Open Folder** to select a directory — ΣIGMA will scan it for DICOM and NIfTI volumes
 2. Select a volume from the list on the left panel to open it
 3. Use the toolbar tools to adjust window/level, paint segmentations, and manage labels
 4. Click **Back to Volumes** to return to the volume list

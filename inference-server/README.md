@@ -1,7 +1,7 @@
-# NextEd AI Inference Server
+# SIGMA AI Inference Server
 
 Runs on a GPU machine (DGX Spark, cloud GPU, etc.) and serves AI model inference
-for the NextEd medical image viewer.
+for the SIGMA medical image viewer.
 
 ## Setup on DGX Spark
 
@@ -16,9 +16,9 @@ uv venv && uv sync
 uv run python server.py --host 0.0.0.0 --port 8080
 ```
 
-## Configure NextEd to use it
+## Configure SIGMA to use it
 
-Edit `models/ai-models.json` on the machine running the NextEd image server:
+Edit `models/ai-models.json` on the machine running the SIGMA image server:
 ```json
 {
   "server": "http://<dgx-ip>:8080",

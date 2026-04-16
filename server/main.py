@@ -1,4 +1,4 @@
-"""NextEd server — FastAPI application entry point.
+"""SIGMA server — FastAPI application entry point.
 
 Usage:
     python main.py <path> [<path> ...]
@@ -88,7 +88,7 @@ async def lifespan(app_instance: FastAPI):
     print("Watcher stopped")
 
 
-app = FastAPI(title="NextEd Image Server", lifespan=lifespan)
+app = FastAPI(title="SIGMA Image Server", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -122,7 +122,7 @@ _catalog: list[VolumeMetadata] = []
 _segmentation_catalog: dict[str, list[SegmentationMetadata]] = {}
 
 _SEG_PATTERN = re.compile(r'_seg(mentation)?\.(nii\.gz|nii)$')
-_CACHE_FILENAME = ".nexted_cache.json"
+_CACHE_FILENAME = ".sigma_cache.json"
 _MIN_DIM = 5  # Minimum dimension size to include a volume
 
 

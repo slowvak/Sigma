@@ -1,11 +1,11 @@
-"""NextEd AI Inference Server — runs on a GPU machine (DGX Spark, etc.).
+"""SIGMA AI Inference Server — runs on a GPU machine (DGX Spark, etc.).
 
 Wraps TotalSegmentator and other models behind a simple HTTP API.
 
 Usage:
     python server.py [--host 0.0.0.0] [--port 8080]
 
-The NextEd image server proxies requests here via the config in
+The SIGMA image server proxies requests here via the config in
 models/ai-models.json: { "server": "http://<this-machine>:8080" }
 """
 
@@ -21,7 +21,7 @@ import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import Response
 
-app = FastAPI(title="NextEd AI Inference Server")
+app = FastAPI(title="SIGMA AI Inference Server")
 
 # Registry of model runners — keyed by weights string from config
 _runners: dict[str, callable] = {}
@@ -209,7 +209,7 @@ async def predict(
             media_type="application/json",
         )
 
-    with tempfile.TemporaryDirectory(prefix="nexted_ai_") as tmpdir:
+    with tempfile.TemporaryDirectory(prefix="sigma_ai_") as tmpdir:
         tmpdir = Path(tmpdir)
 
         # Save uploaded files
@@ -277,7 +277,7 @@ def _default_color(idx: int) -> str:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="NextEd AI Inference Server")
+    parser = argparse.ArgumentParser(description="SIGMA AI Inference Server")
     parser.add_argument("--host", default="0.0.0.0", help="Bind address")
     parser.add_argument("--port", type=int, default=8080, help="Port")
     args = parser.parse_args()

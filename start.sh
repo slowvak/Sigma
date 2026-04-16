@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# start.sh — Start NextEd components that aren't already running.
+# start.sh — Start SIGMA components that aren't already running.
 #
 # Components:
 #   API server      → http://localhost:8050  (server/main.py via uv)
@@ -24,9 +24,9 @@ port_in_use() {
   lsof -iTCP:"$1" -sTCP:LISTEN -t >/dev/null 2>&1
 }
 
-log()  { printf "\033[1;34m[nexted]\033[0m %s\n" "$*"; }
-ok()   { printf "\033[1;32m[nexted]\033[0m %s\n" "$*"; }
-warn() { printf "\033[1;33m[nexted]\033[0m %s\n" "$*"; }
+log()  { printf "\033[1;34m[sigma]\033[0m %s\n" "$*"; }
+ok()   { printf "\033[1;32m[sigma]\033[0m %s\n" "$*"; }
+warn() { printf "\033[1;33m[sigma]\033[0m %s\n" "$*"; }
 
 # ── API server ─────────────────────────────────────────────────────────────────
 
@@ -56,7 +56,7 @@ fi
 
 # ── Wait for API to be ready ───────────────────────────────────────────────────
 
-printf "\n\033[1;34m[nexted]\033[0m Waiting for API  on http://localhost:$API_PORT"
+printf "\n\033[1;34m[sigma]\033[0m Waiting for API  on http://localhost:$API_PORT"
 for i in $(seq 1 30); do
   if port_in_use "$API_PORT"; then
     printf " ✓\n"
@@ -75,7 +75,7 @@ fi
 
 UI_URL="http://localhost:$UI_PORT"
 
-printf "\033[1;34m[nexted]\033[0m Waiting for UI   on $UI_URL"
+printf "\033[1;34m[sigma]\033[0m Waiting for UI   on $UI_URL"
 for i in $(seq 1 30); do
   if port_in_use "$UI_PORT"; then
     printf " ✓\n"
@@ -93,7 +93,7 @@ fi
 # ── Prompt ────────────────────────────────────────────────────────────────────
 
 echo ""
-ok "NextEd is ready."
+ok "SIGMA is ready."
 echo ""
 printf "  Open: \033[1;36m%s\033[0m\n" "$UI_URL"
 echo ""

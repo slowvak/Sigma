@@ -205,10 +205,10 @@ def build_dicom_seg(
         series_number=100,
         sop_instance_uid=hd.UID(),
         instance_number=1,
-        manufacturer="NextEd",
-        manufacturer_model_name="NextEd Segmentation Editor",
+        manufacturer="SIGMA",
+        manufacturer_model_name="SIGMA Segmentation Editor",
         software_versions="2.0",
-        device_serial_number="NextEd-001",
+        device_serial_number="SIGMA-001",
         series_description=f"Segmentation - {filename}",
     )
 

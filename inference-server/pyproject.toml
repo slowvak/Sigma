@@ -1,7 +1,7 @@
 [project]
-name = "nexted-inference-server"
+name = "sigma-inference-server"
 version = "0.1.0"
-description = "AI inference server for NextEd — deploy on GPU machine"
+description = "AI inference server for SIGMA — deploy on GPU machine"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",

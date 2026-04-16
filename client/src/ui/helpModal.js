@@ -43,7 +43,7 @@ export function openHelpModal() {
   headerRow.style.marginBottom = '1.5rem';
 
   const title = document.createElement('h2');
-  title.textContent = 'NextEd Help';
+  title.textContent = 'ΣIGMA Help';
   title.style.margin = '0';
 
   const closeBtn = document.createElement('button');
@@ -131,12 +131,13 @@ export function openHelpModal() {
     ['Refine', 'Snaps the active label boundary to image edges on the current axial slice using Sobel gradient'],
     ['Propagate', 'Copies the label from the adjacent slice and refines it \u2014 step through a stack slice by slice'],
     ['Fill Holes', 'Fills enclosed background regions within each connected component of the active label on this slice'],
+    ['Clear Slice', 'Removes all voxels of the active label on the current slice only'],
     ['Filter', 'Smooths the raw image intensities. Options: 2D/3D, Mean/Median/Sigma (Gaussian-weighted mean), kernel size 3/5/7, apply to current Slice or entire Volume. A progress bar shows completion.'],
     ['Save As...', 'Writes the current segmentation back to the server as a NIfTI mask file'],
   ]));
 
   modal.appendChild(section('Labels', [
-    ['Label list', 'Shows all segmentation labels. Click a label to make it active for painting.'],
+    ['Label list', 'Shows all segmentation labels. Single-click a label to make it active for painting; double-click to open the label editor (rename, change colour, delete).'],
     ['Eye icon', 'Toggle visibility of a label in the overlay'],
     ['Colour swatch', 'Click to change the label colour'],
     ['+ button', 'Add a new label; prompts for a name and assigns the next available colour'],
