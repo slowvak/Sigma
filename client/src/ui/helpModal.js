@@ -156,6 +156,7 @@ export function openHelpModal() {
   modal.appendChild(section('Keyboard Shortcuts', [
     ['?', 'Open this help panel'],
     ['Ctrl+Z', 'Undo last edit'],
+    ['Space', 'Toggle mask overlay on/off (restores previous opacity when turned back on)'],
     ['Escape', 'Close any open modal'],
   ]));
 
